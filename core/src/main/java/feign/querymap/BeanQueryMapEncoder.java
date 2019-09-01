@@ -29,6 +29,7 @@ import java.util.*;
  *
  * order of included query parameters not guaranteed, and as usual, if any value is null, it will be
  * left out
+ * 该类 相比 FieldQueryMapEncoder 好像 范围要小些 只有携带Get的字段才会设置到 Map中
  */
 public class BeanQueryMapEncoder implements QueryMapEncoder {
   private final Map<Class<?>, ObjectParamMetadata> classToMetadata =
@@ -60,6 +61,9 @@ public class BeanQueryMapEncoder implements QueryMapEncoder {
     return metadata;
   }
 
+  /**
+   * 对象参数 元数据
+   */
   private static class ObjectParamMetadata {
 
     private final List<PropertyDescriptor> objectProperties;
@@ -80,6 +84,32 @@ public class BeanQueryMapEncoder implements QueryMapEncoder {
       }
 
       return new ObjectParamMetadata(properties);
+    }
+  }
+
+  public static void main(String[] args) {
+    BeanQueryMapEncoder beanQueryMapEncoder = new BeanQueryMapEncoder();
+    beanQueryMapEncoder.encode(new A());
+  }
+  static class A {
+    private int age;
+    private String name;
+
+    public int getAge() {
+      return age;
+    }
+
+    public void setAge(int age) {
+      this.age = age;
+    }
+
+    public void setName(String name) {
+      this.name = name;
+    }
+
+    public String getName() {
+
+      return name;
     }
   }
 }

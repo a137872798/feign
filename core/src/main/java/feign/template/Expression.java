@@ -19,6 +19,7 @@ import java.util.regex.Pattern;
 
 /**
  * URI Template Expression.
+ * 代表 url中的 {xxx} 可替换成需要的参数
  */
 abstract class Expression implements TemplateChunk {
 

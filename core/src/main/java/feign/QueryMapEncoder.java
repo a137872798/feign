@@ -22,7 +22,7 @@ import java.util.Map;
  *
  * @see FieldQueryMapEncoder
  * @see BeanQueryMapEncoder
- *
+ * 将一个对象 编码成一个 Map 并且根据 参数name 来获取想要的值
  */
 public interface QueryMapEncoder {
 
@@ -31,6 +31,7 @@ public interface QueryMapEncoder {
    *
    * @param object the object to encode
    * @return the map represented by the object
+   * 将对象编码生成一个 map
    */
   Map<String, Object> encode(Object object);
 

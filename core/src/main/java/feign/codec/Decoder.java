@@ -59,6 +59,7 @@ import feign.Util;
  * <h3>Note on exception propagation</h3> Exceptions thrown by {@link Decoder}s get wrapped in a
  * {@link DecodeException} unless they are a subclass of {@link FeignException} already, and unless
  * the client was configured with {@link Feign.Builder#decode404()}.
+ * 解码器接口
  */
 public interface Decoder {
 
@@ -74,14 +75,18 @@ public interface Decoder {
    * @throws IOException will be propagated safely to the caller.
    * @throws DecodeException when decoding failed due to a checked exception besides IOException.
    * @throws FeignException when decoding succeeds, but conveys the operation failed.
+   * 将 response 对象 根据指定类型进行解码  Type 代表 解码后的结果类型
    */
   Object decode(Response response, Type type) throws IOException, DecodeException, FeignException;
 
-  /** Default implementation of {@code Decoder}. */
+  /** Default implementation of {@code Decoder}.
+   *  解码器的 默认实现 针对 string 类型
+   * */
   public class Default extends StringDecoder {
 
     @Override
     public Object decode(Response response, Type type) throws IOException {
+      // 如果是 失败 或者  204(成功但是不返回数据体)
       if (response.status() == 404 || response.status() == 204)
         return Util.emptyValueOf(type);
       if (response.body() == null)
@@ -89,6 +94,7 @@ public interface Decoder {
       if (byte[].class.equals(type)) {
         return Util.toByteArray(response.body().asInputStream());
       }
+      // 相当是默认 type 是string
       return super.decode(response, type);
     }
   }

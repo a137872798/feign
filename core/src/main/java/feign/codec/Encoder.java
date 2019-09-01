@@ -62,9 +62,13 @@ import static java.lang.String.format;
  * &#064;RequestLine(&quot;POST /&quot;)
  * Session login(@Param(&quot;username&quot;) String username, @Param(&quot;password&quot;) String password);
  * </pre>
+ * 编码器接口
  */
 public interface Encoder {
   /** Type literal for {@code Map<String, ?>}, indicating the object to encode is a form. */
+  /**
+   * 这里生成了一个 代表 Map<String, ?> 的泛型对象
+   */
   Type MAP_STRING_WILDCARD = Util.MAP_STRING_WILDCARD;
 
   /**
@@ -75,16 +79,19 @@ public interface Encoder {
    *        indicates form encoding.
    * @param template the request template to populate.
    * @throws EncodeException when encoding failed due to a checked exception.
+   * 将Object 对象 转变成Req 的模板对象
    */
   void encode(Object object, Type bodyType, RequestTemplate template) throws EncodeException;
 
   /**
    * Default implementation of {@code Encoder}.
+   * 默认情况也是只处理String类型
    */
   class Default implements Encoder {
 
     @Override
     public void encode(Object object, Type bodyType, RequestTemplate template) {
+      // 如果是String 类型 直接 返回 toString 的数据
       if (bodyType == String.class) {
         template.body(object.toString());
       } else if (bodyType == byte[].class) {

@@ -29,6 +29,7 @@ import java.util.NoSuchElementException;
  *
  * @author Bob Lee
  * @author Jesse Wilson
+ * 代表 feign中有关类型的 工具类
  */
 public final class Types {
 
@@ -38,6 +39,11 @@ public final class Types {
     // No instances.
   }
 
+  /**
+   * 获取 type 的原始类型
+   * @param type
+   * @return
+   */
   public static Class<?> getRawType(Type type) {
     if (type instanceof Class<?>) {
       // Type is a normal class.
@@ -190,7 +196,9 @@ public final class Types {
    * ArrayList<String>}, this returns {@code Iterable<String>} given the input {@code
    * Iterable.class}.
    *
-   * @param supertype a superclass of, or interface implemented by, this.
+   * @param context 比如 List<String>
+   * @param contextRawType 比如 List
+   * @param supertype a superclass of, or interface implemented by, this. 比如 Optional
    */
   static Type getSupertype(Type context, Class<?> contextRawType, Class<?> supertype) {
     if (!supertype.isAssignableFrom(contextRawType)) {
@@ -301,21 +309,47 @@ public final class Types {
     return genericDeclaration instanceof Class ? (Class<?>) genericDeclaration : null;
   }
 
+  /**
+   * 通过 调用type.isPrimitive() 直接判断某个类型是否是原始类型
+   * @param type
+   */
   private static void checkNotPrimitive(Type type) {
     if (type instanceof Class<?> && ((Class<?>) type).isPrimitive()) {
       throw new IllegalArgumentException();
     }
   }
 
+  /**
+   * ParameterizedType 代表携带了泛型参数的 接口  比如 List<String>  单纯的 List 接口是不满足条件的
+   */
   static final class ParameterizedTypeImpl implements ParameterizedType {
 
+    // 注意 下面的 type 都是 class对象
+
+    /**
+     * 不太好解释 可以理解为  Map.Entry<String, Long>  会返回 Map  好像必须是 内部类
+     */
     private final Type ownerType;
+    /**
+     * 返回原始类型 比如 List Map
+     */
     private final Type rawType;
+    /**
+     * 代表 泛型参数的实际类型
+     */
     private final Type[] typeArguments;
 
+    /**
+     * 该对象在初始化时 就已经设置了需要的核心属性 应该是把该对象作为一种缓存了吧 避免频繁通过反射获取需要的数值
+     * @param ownerType
+     * @param rawType
+     * @param typeArguments
+     */
     ParameterizedTypeImpl(Type ownerType, Type rawType, Type... typeArguments) {
       // Require an owner type if the raw type needs it.
       if (rawType instanceof Class<?>
+              // getEnclosingClass 针对内部类获取 外部类 的 比如 Map.Entry  通过 Entry 获取Map  如果针对外部类直接调用返回null
+              // 下面判断的意思是 如果存在外部类 比如保证 ownerType 存在 返回来也一样
           && (ownerType == null) != (((Class<?>) rawType).getEnclosingClass() == null)) {
         throw new IllegalArgumentException();
       }
@@ -328,10 +362,15 @@ public final class Types {
         if (typeArgument == null) {
           throw new NullPointerException();
         }
+        // 检查是否是 原始类型
         checkNotPrimitive(typeArgument);
       }
     }
 
+    /**
+     * 代表 返回 泛型的 实际类型 比如 <K,V> 返回 <String, Long>
+     * @return
+     */
     public Type[] getActualTypeArguments() {
       return typeArguments.clone();
     }
@@ -402,16 +441,31 @@ public final class Types {
    * The WildcardType interface supports multiple upper bounds and multiple lower bounds. We only
    * support what the Java 6 language needs - at most one bound. If a lower bound is set, the upper
    * bound must be Object.class.
+   * 应该也是作为一种缓存
    */
   static final class WildcardTypeImpl implements WildcardType {
 
+    /**
+     * 代表 泛型的 上界 对应 ? extends ClassA
+     */
     private final Type upperBound;
+    /**
+     * 代表 下界 对应 ? super ClassB
+     */
     private final Type lowerBound;
 
+    /**
+     * 通过指定上界和 下界 进行初始化
+     * @param upperBounds
+     * @param lowerBounds
+     */
     WildcardTypeImpl(Type[] upperBounds, Type[] lowerBounds) {
+      // TODO 这里的条件先不细究 因为还不熟悉 WildcardType
+      // 下界长度 指定为 1 或 0
       if (lowerBounds.length > 1) {
         throw new IllegalArgumentException();
       }
+      // 上界长度不能为1
       if (upperBounds.length != 1) {
         throw new IllegalArgumentException();
       }

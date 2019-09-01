@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
  * A Generic representation of a Template Expression as defined by
  * <a href="https://tools.ietf.org/html/rfc6570">RFC 6570</a>, with some relaxed rules, allowing the
  * concept to be used in areas outside of the uri.
+ * feign 的一种模板
  */
 public class Template {
 
@@ -42,10 +43,25 @@ public class Template {
   private static final Logger logger = Logger.getLogger(Template.class.getName());
   private static final Pattern QUERY_STRING_PATTERN = Pattern.compile("(?<!\\{)(\\?)");
   private final String template;
+  /**
+   * 是否允许不解析
+   */
   private final boolean allowUnresolved;
+  /**
+   * 是否必须解析
+   */
   private final EncodingOptions encode;
+  /**
+   * 斜线也编码
+   */
   private final boolean encodeSlash;
+  /**
+   * 字符集
+   */
   private final Charset charset;
+  /**
+   * 代表一组 "块"
+   */
   private final List<TemplateChunk> templateChunks = new ArrayList<>();
 
   /**
@@ -64,7 +80,9 @@ public class Template {
     }
     this.template = value;
     this.allowUnresolved = ExpansionOptions.ALLOW_UNRESOLVED == allowUnresolved;
+    // 是否需要编码
     this.encode = encode;
+    // 斜线是否需要被编码
     this.encodeSlash = encodeSlash;
     this.charset = charset;
     this.parseTemplate();
@@ -75,6 +93,7 @@ public class Template {
    *
    * @param variables containing the values for expansion.
    * @return a fully qualified URI with the variables expanded.
+   * 使用额外的参数进行拓展
    */
   public String expand(Map<String, ?> variables) {
     if (variables == null) {
@@ -181,6 +200,7 @@ public class Template {
 
   /**
    * Parse the template into {@link TemplateChunk}s.
+   * 处理模板生成 chunk
    */
   private void parseTemplate() {
     /*
@@ -196,6 +216,7 @@ public class Template {
        */
       String path = this.template.substring(0, queryStringMatcher.start());
       String query = this.template.substring(queryStringMatcher.end() - 1);
+      // 按照特定符号进行解析
       this.parseFragment(path, false);
       this.parseFragment(query, true);
     } else {
@@ -209,6 +230,7 @@ public class Template {
    *
    * @param fragment to parse
    * @param query if the fragment is part of a query string.
+   *              解析碎片
    */
   private void parseFragment(String fragment, boolean query) {
     ChunkTokenizer tokenizer = new ChunkTokenizer(fragment);
@@ -261,6 +283,7 @@ public class Template {
    * Splits a Uri into Chunks that exists inside and outside of an expression, delimited by curly
    * braces "{}". Nested expressions are treated as literals, for example "foo{bar{baz}}" will be
    * treated as "foo, {bar{baz}}". Inspired by Apache CXF Jax-RS.
+   * 使用 词法解析器对象
    */
   static class ChunkTokenizer {
 
@@ -347,6 +370,9 @@ public class Template {
     }
   }
 
+  /**
+   * 是否必须要解析
+   */
   public enum ExpansionOptions {
     ALLOW_UNRESOLVED, REQUIRED
   }

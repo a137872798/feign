@@ -13,6 +13,7 @@
  */
 package feign;
 
+import javax.swing.text.html.Option;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
@@ -47,6 +48,7 @@ import static java.lang.String.format;
 
 /**
  * Utilities, typically copied in from guava, so as to avoid dependency conflicts.
+ * feign
  */
 public class Util {
 
@@ -85,9 +87,13 @@ public class Util {
 
   /**
    * Type literal for {@code Map<String, ?>}.
+   * 生成了 一个对应解析后的 Map<String, ?> 对象
    */
   public static final Type MAP_STRING_WILDCARD =
+          // 第三个参数 String.class 对应的是 Map的 K类型
       new Types.ParameterizedTypeImpl(null, Map.class, String.class,
+          // WildcardType 是专门针对泛型参数的 接口  常用的 有  ? extends ClassA ? super ClassB  ?  E 等等
+          // 这里代表 只设置了 Object 作为 第二个泛型参数的上界 也就对应 ?
           new Types.WildcardTypeImpl(new Type[] {Object.class}, new Type[0]));
 
   private Util() { // no instances
@@ -219,6 +225,7 @@ public class Util {
    */
   public static Type resolveLastTypeParameter(Type genericContext, Class<?> supertype)
       throws IllegalStateException {
+    // 这里先不深究  返回的还是 原对象
     Type resolvedSuperType =
         Types.getSupertype(genericContext, Types.getRawType(genericContext), supertype);
     checkState(resolvedSuperType instanceof ParameterizedType,
@@ -232,6 +239,10 @@ public class Util {
       }
     }
     return types[types.length - 1];
+  }
+
+  public static void main(String[] args) {
+    Util.resolveLastTypeParameter(new Types.ParameterizedTypeImpl(null, Optional.class, List.class), Optional.class);
   }
 
   /**
@@ -252,8 +263,11 @@ public class Util {
    * When {@link Feign.Builder#decode404() decoding HTTP 404 status}, you'll need to teach decoders
    * a default empty value for a type. This method cheaply supports typical types by only looking at
    * the raw type (vs type hierarchy). Decorate for sophistication.
+   * 获取 指定类型的空值
    */
   public static Object emptyValueOf(Type type) {
+    // getRawType 一般是 针对各种泛型的 用来获取实际类型 针对普通的 class 对象则会 直接返回
+    // EMPTIES 的 sup 函数 总是返回 null 代表无论什么类型的class 总是返回null
     return EMPTIES.getOrDefault(Types.getRawType(type), () -> null).get();
   }
 
@@ -298,6 +312,7 @@ public class Util {
 
   /**
    * Adapted from {@code com.google.common.io.ByteStreams.toByteArray()}.
+   * 通过 ByteArrayOutputStream 解析数据流
    */
   public static byte[] toByteArray(InputStream in) throws IOException {
     checkNotNull(in, "in");

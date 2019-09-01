@@ -20,6 +20,7 @@ import java.io.IOException;
 
 /**
  * Origin exception type for all Http Apis.
+ * feign 的异常对象 内部包含了 httpStatus 和 req 等信息
  */
 public class FeignException extends RuntimeException {
 
@@ -119,6 +120,12 @@ public class FeignException extends RuntimeException {
         request.requestBody().asBytes());
   }
 
+  /**
+   * 根据 方法名 和 res 对象 生成 feignException 对象
+   * @param methodKey
+   * @param response
+   * @return
+   */
   public static FeignException errorStatus(String methodKey, Response response) {
     String message = format("status %s reading %s", response.status(), methodKey);
 
@@ -133,13 +140,23 @@ public class FeignException extends RuntimeException {
     return errorStatus(response.status(), message, response.request(), body);
   }
 
+  /**
+   * 通过 status 和 req body 等信息 生成 feignException 对象
+   * @param status
+   * @param message
+   * @param request
+   * @param body
+   * @return
+   */
   private static FeignException errorStatus(int status,
                                             String message,
                                             Request request,
                                             byte[] body) {
+    // 代表 400~ 500
     if (isClientError(status)) {
       return clientErrorStatus(status, message, request, body);
     }
+    // 代表 500以上
     if (isServerError(status)) {
       return serverErrorStatus(status, message, request, body);
     }
@@ -150,6 +167,14 @@ public class FeignException extends RuntimeException {
     return status >= 400 && status < 500;
   }
 
+  /**
+   * 生成对应的 客户端异常
+   * @param status
+   * @param message
+   * @param request
+   * @param body
+   * @return
+   */
   private static FeignClientException clientErrorStatus(int status,
                                                         String message,
                                                         Request request,

@@ -26,12 +26,22 @@ import java.util.stream.Collectors;
  *
  * order of included query parameters not guaranteed, and as usual, if any value is null, it will be
  * left out
+ * 该对象是 将 Object的 属性和对应的值 保存到map中
  */
 public class FieldQueryMapEncoder implements QueryMapEncoder {
 
+  /**
+   * 应该是 单例模式 下的缓存
+   */
   private final Map<Class<?>, ObjectParamMetadata> classToMetadata =
       new HashMap<Class<?>, ObjectParamMetadata>();
 
+  /**
+   * 编码
+   * @param object the object to encode
+   * @return
+   * @throws EncodeException
+   */
   @Override
   public Map<String, Object> encode(Object object) throws EncodeException {
     try {
@@ -49,6 +59,11 @@ public class FieldQueryMapEncoder implements QueryMapEncoder {
     }
   }
 
+  /**
+   * 将对象的属性抽出来生成 元数据
+   * @param objectType
+   * @return
+   */
   private ObjectParamMetadata getMetadata(Class<?> objectType) {
     ObjectParamMetadata metadata = classToMetadata.get(objectType);
     if (metadata == null) {
@@ -58,8 +73,14 @@ public class FieldQueryMapEncoder implements QueryMapEncoder {
     return metadata;
   }
 
+  /**
+   * Object 元数据对象
+   */
   private static class ObjectParamMetadata {
 
+    /**
+     * 该对象内部的字段
+     */
     private final List<Field> objectFields;
 
     private ObjectParamMetadata(List<Field> objectFields) {
@@ -71,9 +92,11 @@ public class FieldQueryMapEncoder implements QueryMapEncoder {
 
       for (Class currentClass = type; currentClass != null; currentClass =
           currentClass.getSuperclass()) {
+        // 将目标类 包括 父类的 所有属性添加到 Collection 中
         Collections.addAll(allFields, currentClass.getDeclaredFields());
       }
 
+      // 去除掉 编译器 合成的属性
       return new ObjectParamMetadata(allFields.stream()
           .filter(field -> !field.isSynthetic())
           .peek(field -> field.setAccessible(true))

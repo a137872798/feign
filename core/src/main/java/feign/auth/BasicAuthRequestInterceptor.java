@@ -21,6 +21,7 @@ import static feign.Util.checkNotNull;
 
 /**
  * An interceptor that adds the request header needed to use HTTP basic authentication.
+ * 针对 http请求 的 拦截器 为每个请求头 增加 用户名密码
  */
 public class BasicAuthRequestInterceptor implements RequestInterceptor {
 
@@ -44,6 +45,7 @@ public class BasicAuthRequestInterceptor implements RequestInterceptor {
    * @param username the username to use for authentication
    * @param password the password to use for authentication
    * @param charset the charset to use when encoding the credentials
+   *                通过 用户名密码 进行初始化
    */
   public BasicAuthRequestInterceptor(String username, String password, Charset charset) {
     checkNotNull(username, "username");

@@ -20,6 +20,7 @@ import java.util.Map;
 /**
  * Template for @{@link feign.Body} annotated Templates. Unresolved expressions are preserved as
  * literals and literals are not URI encoded.
+ * 对应使用了 @Body 注解的方法
  */
 public final class BodyTemplate extends Template {
 

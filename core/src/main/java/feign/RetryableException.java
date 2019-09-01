@@ -19,12 +19,19 @@ import java.util.Date;
 /**
  * This exception is raised when the {@link Response} is deemed to be retryable, typically via an
  * {@link feign.codec.ErrorDecoder} when the {@link Response#status() status} is 503.
+ * 代表 该异常 是可以通过重试来解决的  retryAfter 应该是 推荐下次访问的时间戳
  */
 public class RetryableException extends FeignException {
 
   private static final long serialVersionUID = 1L;
 
+  /**
+   * 推荐重试的时间戳
+   */
   private final Long retryAfter;
+  /**
+   * 代表推荐的 请求方式
+   */
   private final HttpMethod httpMethod;
 
   /**

@@ -44,6 +44,8 @@ import static feign.Util.ensureClosed;
  *   Stream<Contributor> contributors(@Param("owner") String owner, @Param("repo") String repo);
  * }</code>
  * </pre>
+ * 基于 Stream的 解码器 利用装饰器模式
+ *
  */
 public final class StreamDecoder implements Decoder {
 
@@ -56,6 +58,7 @@ public final class StreamDecoder implements Decoder {
   @Override
   public Object decode(Response response, Type type)
       throws IOException, FeignException {
+    // 这里必须要处理 Stream<T> 类型
     if (!(type instanceof ParameterizedType)) {
       throw new IllegalArgumentException("StreamDecoder supports only stream: unknown " + type);
     }
@@ -63,15 +66,20 @@ public final class StreamDecoder implements Decoder {
     if (!Stream.class.equals(streamType.getRawType())) {
       throw new IllegalArgumentException("StreamDecoder supports only stream: unknown " + type);
     }
+
+    // IteratorParameterizedType 作为 目标类型
     Iterator<?> iterator =
         (Iterator) iteratorDecoder.decode(response, new IteratorParameterizedType(streamType));
 
+    // 返回的是一个 Stream 对象 不过在 调用close 时 会执行额外的方法
     return StreamSupport.stream(
         Spliterators.spliteratorUnknownSize(iterator, 0), false)
         .onClose(() -> {
           if (iterator instanceof Closeable) {
+            // 执行 Closeable.close()
             ensureClosed((Closeable) iterator);
           } else {
+            // 关闭 response
             ensureClosed(response);
           }
         });
@@ -81,6 +89,9 @@ public final class StreamDecoder implements Decoder {
     return new StreamDecoder(iteratorDecoder);
   }
 
+  /**
+   * 就是将 Stream<T> 的rawType 改成了 Iterator
+   */
   static final class IteratorParameterizedType implements ParameterizedType {
 
     private final ParameterizedType streamType;

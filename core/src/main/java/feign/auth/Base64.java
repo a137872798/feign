@@ -20,6 +20,7 @@ import java.io.UnsupportedEncodingException;
  * "https://github.com/square/okhttp/blob/master/okhttp-protocols/src/main/java/com/squareup/okhttp/internal/Base64.java">okhttp</a>
  *
  * @author Alexander Y. Kleymenov
+ * 针对  Base64 的编解码器
  */
 final class Base64 {
 

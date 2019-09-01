@@ -65,6 +65,7 @@ import java.util.Map;
  * It is commonly the case that 404 (Not Found) status has semantic value in HTTP apis. While the
  * default behavior is to raise exeception, users can alternatively enable 404 processing via
  * {@link feign.Feign.Builder#decode404()}.
+ * 异常解码器
  */
 public interface ErrorDecoder {
 
@@ -80,16 +81,22 @@ public interface ErrorDecoder {
    * @return Exception IOException, if there was a network error reading the response or an
    *         application-specific exception decoded by the implementation. If the throwable is
    *         retryable, it should be wrapped, or a subtype of {@link RetryableException}
+   *         将响应结果 解析成异常对象
    */
   public Exception decode(String methodKey, Response response);
 
   public static class Default implements ErrorDecoder {
 
+    /**
+     * 该对象可以 通过传入的 时间字符串 生成对应的时间戳
+     */
     private final RetryAfterDecoder retryAfterDecoder = new RetryAfterDecoder();
 
     @Override
     public Exception decode(String methodKey, Response response) {
+      // 通过res 中的 status 生成对应的异常对象
       FeignException exception = errorStatus(methodKey, response);
+      // 获取 请求头中的重试时间 并包装成一个  之后会重试的异常对象返回  当需要重试时 会在 res 对象的请求头中  设置 Retry_After
       Date retryAfter = retryAfterDecoder.apply(firstOrNull(response.headers(), RETRY_AFTER));
       if (retryAfter != null) {
         return new RetryableException(
@@ -114,6 +121,7 @@ public interface ErrorDecoder {
   /**
    * Decodes a {@link feign.Util#RETRY_AFTER} header into an absolute date, if possible. <br>
    * See <a href="https://tools.ietf.org/html/rfc2616#section-14.37">Retry-After format</a>
+   * 具备重试功能的解码器
    */
   static class RetryAfterDecoder {
 
@@ -138,6 +146,7 @@ public interface ErrorDecoder {
      *
      * @param retryAfter String in
      *        <a href="https://tools.ietf.org/html/rfc2616#section-14.37" >Retry-After format</a>
+     *                   获取重试时间  就是解析传入的 时间格式字符串 转换成 long 类型
      */
     public Date apply(String retryAfter) {
       if (retryAfter == null) {
@@ -148,6 +157,7 @@ public interface ErrorDecoder {
         long deltaMillis = SECONDS.toMillis(Long.parseLong(retryAfter));
         return new Date(currentTimeMillis() + deltaMillis);
       }
+      // 如果是其他格式 尝试 使用 format 对象进行解析
       synchronized (rfc822Format) {
         try {
           return rfc822Format.parse(retryAfter);
