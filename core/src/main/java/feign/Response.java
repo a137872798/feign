@@ -36,13 +36,26 @@ import static feign.Util.toByteArray;
 
 /**
  * An immutable response to an http invocation which only returns string content.
+ * 不变的 响应结果对象
  */
 public final class Response implements Closeable {
 
+  /**
+   * 本次响应结果码
+   */
   private final int status;
+  /**
+   * 结果信息
+   */
   private final String reason;
+  /**
+   * 响应头
+   */
   private final Map<String, Collection<String>> headers;
   private final Body body;
+  /**
+   * 对应的请求对象
+   */
   private final Request request;
 
   private Response(Builder builder) {
@@ -207,26 +220,30 @@ public final class Response implements Closeable {
      * <br>
      * <b>Note</b><br>
      * This is an integer as most implementations cannot do bodies greater than 2GB.
+     * 代表 数据体长度
      */
     Integer length();
 
     /**
      * True if {@link #asInputStream()} and {@link #asReader()} can be called more than once.
+     * 代表 该数据可以被读取多次
      */
     boolean isRepeatable();
 
     /**
      * It is the responsibility of the caller to close the stream.
+     * 将数据转换成 输入流
      */
     InputStream asInputStream() throws IOException;
 
     /**
      * It is the responsibility of the caller to close the stream.
+     * 作为一个 包装输入流
      */
     Reader asReader() throws IOException;
 
     /**
-     *
+     * 使用指定的字符集
      */
     Reader asReader(Charset charset) throws IOException;
   }

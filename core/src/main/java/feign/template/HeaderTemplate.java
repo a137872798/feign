@@ -25,10 +25,14 @@ import java.util.stream.StreamSupport;
 /**
  * Template for HTTP Headers. Variables that are unresolved are ignored and Literals are not
  * encoded.
+ * HTTP Header的模板
  */
 public final class HeaderTemplate extends Template {
 
   /* cache a copy of the variables for lookup later */
+  /**
+   * 缓存
+   */
   private LinkedHashSet<String> values;
   private String name;
 
@@ -63,6 +67,7 @@ public final class HeaderTemplate extends Template {
    * @param headerTemplate to append to.
    * @param values to append.
    * @return a new Header Template with the values added.
+   * 将数据添加到请求头 这里是返回一个新对象
    */
   public static HeaderTemplate append(HeaderTemplate headerTemplate, Iterable<String> values) {
     LinkedHashSet<String> headerValues = new LinkedHashSet<>(headerTemplate.getValues());
@@ -76,9 +81,11 @@ public final class HeaderTemplate extends Template {
    * Creates a new Header Template.
    *
    * @param template to parse.
+   *                 初始化 HeaderTemplate 对象
    */
   private HeaderTemplate(String template, String name, Iterable<String> values, Charset charset) {
     super(template, ExpansionOptions.REQUIRED, EncodingOptions.NOT_REQUIRED, false, charset);
+    // 将values过滤后设置到 HashSet 中
     this.values = StreamSupport.stream(values.spliterator(), false)
         .filter(Util::isNotBlank)
         .collect(Collectors.toCollection(LinkedHashSet::new));

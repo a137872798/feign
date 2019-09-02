@@ -58,6 +58,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 public @interface QueryMap {
   /**
    * Specifies whether parameter names and values are already encoded.
+   * 参数是否已经被 编码
    *
    * @see Param#encoded
    */

@@ -22,23 +22,60 @@ import java.util.List;
 import java.util.Map;
 import feign.Param.Expander;
 
+/**
+ * 方法 元数据  一个普通的javaBean 对象
+ */
 public final class MethodMetadata implements Serializable {
 
   private static final long serialVersionUID = 1L;
+  /**
+   * 唯一标识 通过class+method 生成
+   */
   private String configKey;
+  /**
+   * 返回类型
+   */
   private transient Type returnType;
+
+  /**
+   * 参数类型是 URL 的下标
+   */
   private Integer urlIndex;
+  /**
+   * 参数类型是 Body 的下标
+   */
   private Integer bodyIndex;
+  /**
+   * 携带 @HeaderMap 注解的参数下标  一个method 只允许有一个参数携带该注解
+   */
   private Integer headerMapIndex;
+  /**
+   * 代表第几个参数 携带 @QueryMap 注解
+   */
   private Integer queryMapIndex;
+  /**
+   * 代表 @QueryMap 对应的参数是否需要编码
+   */
   private boolean queryMapEncoded;
   private transient Type bodyType;
   private RequestTemplate template = new RequestTemplate();
+  /**
+   *  携带 @Param 的参数名
+   */
   private List<String> formParams = new ArrayList<String>();
+  /**
+   * 该容器是 维护 参数下标 和 @Param 注解内 name 的容器
+   */
   private Map<Integer, Collection<String>> indexToName =
       new LinkedHashMap<Integer, Collection<String>>();
+  /**
+   * 维护参数下标 与对应拓展类的容器
+   */
   private Map<Integer, Class<? extends Expander>> indexToExpanderClass =
       new LinkedHashMap<Integer, Class<? extends Expander>>();
+  /**
+   * 维护参数下标 与 是否需要编码的 容器
+   */
   private Map<Integer, Boolean> indexToEncoded = new LinkedHashMap<Integer, Boolean>();
   private transient Map<Integer, Expander> indexToExpander;
 

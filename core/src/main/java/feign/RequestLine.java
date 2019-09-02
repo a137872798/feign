@@ -22,6 +22,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  * just the http method. Templates should conform to
  * <a href="https://tools.ietf.org/html/rfc6570">RFC 6570</a>. Support is limited to Simple String
  * expansion and Reserved Expansion (Level 1 and Level 2) expressions.
+ * 该注解 代表一个完整的 请求参数 包括了请求方法 和 url 信息
  */
 @java.lang.annotation.Target(METHOD)
 @Retention(RUNTIME)

@@ -56,6 +56,7 @@ public class UriTemplate extends Template {
    * @param uriTemplate to append to.
    * @param fragment to append.
    * @return a new UriTemplate with the fragment appended.
+   * 追加数据到template 中
    */
   public static UriTemplate append(UriTemplate uriTemplate, String fragment) {
     return new UriTemplate(uriTemplate.toString() + fragment, uriTemplate.encodeSlash(),

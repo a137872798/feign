@@ -18,22 +18,42 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 /**
  * Cloned for each invocation to {@link Client#execute(Request, feign.Request.Options)}.
  * Implementations may keep state to determine if retry operations should continue or not.
+ * 判断是否应该在之后 进行重试
  */
 public interface Retryer extends Cloneable {
 
   /**
    * if retry is permitted, return (possibly after sleeping). Otherwise propagate the exception.
+   * 判断是否允许重试 允许的话 设置 之后重试时间 否则 传递异常
    */
   void continueOrPropagate(RetryableException e);
 
   Retryer clone();
 
+  /**
+   * 默认实现
+   */
   class Default implements Retryer {
 
+    /**
+     * 最大重试次数
+     */
     private final int maxAttempts;
+    /**
+     * 每次重试的间隔
+     */
     private final long period;
+    /**
+     * 允许设置的最大间隔
+     */
     private final long maxPeriod;
+    /**
+     * 当前重试次数
+     */
     int attempt;
+    /**
+     * 记录睡眠总时间
+     */
     long sleptForMillis;
 
     public Default() {
@@ -52,14 +72,18 @@ public interface Retryer extends Cloneable {
       return System.currentTimeMillis();
     }
 
+    @Override
     public void continueOrPropagate(RetryableException e) {
+      // 当前重试次数超过最大值 直接抛出异常
       if (attempt++ >= maxAttempts) {
         throw e;
       }
 
       long interval;
       if (e.retryAfter() != null) {
+        // 获取下次重试时间 到当前时间的间隔
         interval = e.retryAfter().getTime() - currentTimeMillis();
+        // 超过最大延迟 更新间隔时间
         if (interval > maxPeriod) {
           interval = maxPeriod;
         }
@@ -67,6 +91,7 @@ public interface Retryer extends Cloneable {
           return;
         }
       } else {
+        // 生成一个间隔时间
         interval = nextMaxInterval();
       }
       try {
@@ -98,6 +123,7 @@ public interface Retryer extends Cloneable {
 
   /**
    * Implementation that never retries request. It propagates the RetryableException.
+   * 总是抛出异常的对象
    */
   Retryer NEVER_RETRY = new Retryer() {
 

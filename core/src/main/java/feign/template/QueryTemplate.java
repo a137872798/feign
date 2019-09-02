@@ -28,12 +28,19 @@ import java.util.stream.StreamSupport;
 
 /**
  * Template for a Query String parameter.
+ * 查询的模板  对应到  &x1&x2...
  */
 public final class QueryTemplate extends Template {
 
   private static final String UNDEF = "undef";
   private List<String> values;
+  /**
+   * 模板对象
+   */
   private final Template name;
+  /**
+   * 用于拼接 集合参数的对象
+   */
   private final CollectionFormat collectionFormat;
   private boolean pure = false;
 
@@ -57,6 +64,7 @@ public final class QueryTemplate extends Template {
    * @param charset for the template.
    * @param collectionFormat to use.
    * @return a QueryTemplate
+   * 创建一个新的 queryTemplate
    */
   public static QueryTemplate create(String name,
                                      Iterable<String> values,
@@ -71,6 +79,7 @@ public final class QueryTemplate extends Template {
     }
 
     /* remove all empty values from the array */
+    // 去空
     Collection<String> remaining = StreamSupport.stream(values.spliterator(), false)
         .filter(Util::isNotBlank)
         .collect(Collectors.toList());
@@ -80,6 +89,7 @@ public final class QueryTemplate extends Template {
     while (iterator.hasNext()) {
       template.append(iterator.next());
       if (iterator.hasNext()) {
+        // 将一组结果按照 ; 拼接
         template.append(COLLECTION_DELIMITER);
       }
     }
@@ -90,14 +100,15 @@ public final class QueryTemplate extends Template {
   /**
    * Append a value to the Query Template.
    *
-   * @param queryTemplate to append to.
-   * @param values to append.
+   * @param queryTemplate to append to.  代表原对象
+   * @param values to append.            追加数据
    * @return a new QueryTemplate with value appended.
    */
   public static QueryTemplate append(QueryTemplate queryTemplate,
                                      Iterable<String> values,
                                      CollectionFormat collectionFormat) {
     List<String> queryValues = new ArrayList<>(queryTemplate.getValues());
+    // 追加数据
     queryValues.addAll(StreamSupport.stream(values.spliterator(), false)
         .filter(Util::isNotBlank)
         .collect(Collectors.toList()));
@@ -120,12 +131,14 @@ public final class QueryTemplate extends Template {
       Charset charset,
       CollectionFormat collectionFormat) {
     super(template, ExpansionOptions.REQUIRED, EncodingOptions.REQUIRED, true, charset);
+    // 这里只使用name 又创建了一个template 对象
     this.name = new Template(name, ExpansionOptions.ALLOW_UNRESOLVED, EncodingOptions.REQUIRED,
         false, charset);
     this.collectionFormat = collectionFormat;
     this.values = StreamSupport.stream(values.spliterator(), false)
         .filter(Util::isNotBlank)
         .collect(Collectors.toList());
+    // 当value 为空时 设置 pure 为true
     if (this.values.isEmpty()) {
       /* in this case, we have a pure parameter */
       this.pure = true;
@@ -159,8 +172,15 @@ public final class QueryTemplate extends Template {
     return this.queryString(name, super.expand(variables));
   }
 
+  /**
+   * 解析表达式
+   * @param expression
+   * @param variables
+   * @return
+   */
   @Override
   protected String resolveExpression(Expression expression, Map<String, ?> variables) {
+    // 就是增加了一个默认值
     if (variables.containsKey(expression.getName())) {
       if (variables.get(expression.getName()) == null) {
         /* explicit undefined */
@@ -173,6 +193,12 @@ public final class QueryTemplate extends Template {
     return UNDEF;
   }
 
+  /**
+   * 查询String  将数据按照 ; 拆分后 在组合
+   * @param name
+   * @param values
+   * @return
+   */
   private String queryString(String name, String values) {
     if (this.pure) {
       return name;

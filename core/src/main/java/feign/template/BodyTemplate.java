@@ -47,11 +47,19 @@ public final class BodyTemplate extends Template {
     }
   }
 
+  /**
+   * 拓展数据
+   * @param variables containing the values for expansion.
+   * @return
+   */
   @Override
   public String expand(Map<String, ?> variables) {
     String expanded = super.expand(variables);
+    // 在父类的基础上 增加 json相关的逻辑
     if (this.json) {
-      /* decode only the first and last character */
+      /* decode only the first and last character
+      *  添加特殊的前缀
+      */
       StringBuilder sb = new StringBuilder();
       sb.append(JSON_TOKEN_START);
       sb.append(expanded,

@@ -24,7 +24,13 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * 静态工具类
+ */
 public final class Expressions {
+  /**
+   * 以 Pattern 作为key Expression 作为value
+   */
   private static Map<Pattern, Class<? extends Expression>> expressions;
 
   static {
@@ -37,11 +43,22 @@ public final class Expressions {
      * - brackets - dashes
      *
      * see https://tools.ietf.org/html/rfc6570#section-2.3 for more information.
+     * 输入  www.baidu.com?name=3&age=11  返回五处匹配 www.baidu.com
+     *                                                 name
+     *                                                 3
+     *                                                 age
+     *                                                 11
      */
     expressions.put(Pattern.compile("(\\w[-\\w.\\[\\]]*[ ]*)(:(.+))?"),
         SimpleExpression.class);
   }
 
+  /**
+   * 传入 原始数据 和 碎片类型生成表达式
+   * @param value
+   * @param type
+   * @return
+   */
   public static Expression create(final String value, final FragmentType type) {
 
     /* remove the start and end braces */
@@ -50,6 +67,7 @@ public final class Expressions {
       throw new IllegalArgumentException("an expression is required.");
     }
 
+    // 找到匹配的第一个数据
     Optional<Entry<Pattern, Class<? extends Expression>>> matchedExpressionEntry =
         expressions.entrySet()
             .stream()
@@ -70,9 +88,11 @@ public final class Expressions {
     Matcher matcher = expressionPattern.matcher(expression);
     if (matcher.matches()) {
       /* we have a valid variable expression, extract the name from the first group */
+      // group(1) 代表括号中第一个内容 以此类推
       variableName = matcher.group(1).trim();
       if (matcher.group(2) != null && matcher.group(3) != null) {
         /* this variable contains an optional pattern */
+        // 第三个元素才是 Pattern
         variablePattern = matcher.group(3);
       }
     }
@@ -80,6 +100,11 @@ public final class Expressions {
     return new SimpleExpression(variableName, variablePattern, type);
   }
 
+  /**
+   * 剥离大括号
+   * @param expression
+   * @return
+   */
   private static String stripBraces(String expression) {
     if (expression == null) {
       return null;
@@ -107,6 +132,12 @@ public final class Expressions {
       return UriUtils.encodeReserved(value.toString(), type, Util.UTF_8);
     }
 
+    /**
+     * 使用传入的 variable 来拓展数据
+     * @param variable
+     * @param encode
+     * @return
+     */
     @Override
     String expand(Object variable, boolean encode) {
       StringBuilder expanded = new StringBuilder();
@@ -117,11 +148,13 @@ public final class Expressions {
         }
         expanded.append(String.join(Template.COLLECTION_DELIMITER, items));
       } else {
+        // 如果需要编码 将数据编码后返回
         expanded.append((encode) ? encode(variable) : variable);
       }
 
       /* return the string value of the variable */
       String result = expanded.toString();
+      // 必须要保证能符合匹配条件
       if (!this.matches(result)) {
         throw new IllegalArgumentException("Value " + expanded
             + " does not match the expression pattern: " + this.getPattern());

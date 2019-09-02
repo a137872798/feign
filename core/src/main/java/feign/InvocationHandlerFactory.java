@@ -19,14 +19,22 @@ import java.util.Map;
 
 /**
  * Controls reflective method dispatch.
+ * 动态代理处理器工厂
  */
 public interface InvocationHandlerFactory {
 
+  /**
+   * 用于创建动态代理执行器工厂
+   * @param target
+   * @param dispatch
+   * @return
+   */
   InvocationHandler create(Target target, Map<Method, MethodHandler> dispatch);
 
   /**
    * Like {@link InvocationHandler#invoke(Object, java.lang.reflect.Method, Object[])}, except for a
    * single method.
+   * 方法处理器  具体的架构应该是 目标对象 调用指定方法 通过匹配 dispatcher 找到对应的MethodHandler 对象 并执行invoker
    */
   interface MethodHandler {
 
@@ -35,6 +43,12 @@ public interface InvocationHandlerFactory {
 
   static final class Default implements InvocationHandlerFactory {
 
+    /**
+     * 传入指定参数生成一个 动态代理处理器
+     * @param target 该对象具备生成 req 的能力
+     * @param dispatch 分发请求的路由表
+     * @return
+     */
     @Override
     public InvocationHandler create(Target target, Map<Method, MethodHandler> dispatch) {
       return new ReflectiveFeign.FeignInvocationHandler(target, dispatch);

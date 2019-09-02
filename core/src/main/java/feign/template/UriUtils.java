@@ -146,6 +146,7 @@ public class UriUtils {
       return encodeChunk(value, type, charset);
     }
 
+    // 下面好像是按照正则匹配 并将满足条件的 块拆开来编码
     int length = value.length();
     StringBuilder encoded = new StringBuilder(length + 8);
     int index = 0;
@@ -176,6 +177,7 @@ public class UriUtils {
    * @param type identifying which uri fragment rules to apply.
    * @param charset to use.
    * @return an encoded uri chunk.
+   * 按照块来编码
    */
   private static String encodeChunk(String value, FragmentType type, Charset charset) {
     byte[] data = value.getBytes(charset);
@@ -186,6 +188,7 @@ public class UriUtils {
         encoded.write(b);
       } else {
         /* percent encode the byte */
+        // 百分比编码 (将b设置成特殊格式)
         pctEncode(b, encoded);
       }
     }
@@ -206,6 +209,9 @@ public class UriUtils {
     bos.write(hex2);
   }
 
+  /**
+   * url 碎片类型
+   */
   enum FragmentType {
 
     URI {
@@ -248,6 +254,11 @@ public class UriUtils {
       }
     };
 
+    /**
+     * 判断是否允许的函数
+     * @param c
+     * @return
+     */
     abstract boolean isAllowed(int c);
 
     protected boolean isAlpha(int c) {

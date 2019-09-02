@@ -35,21 +35,49 @@ import static feign.Util.*;
  * This class is a variation on a UriTemplate, where, in addition to the uri, Headers and Query
  * information also support template expressions.
  * </p>
+ * 请求模板
  */
 @SuppressWarnings({"WeakerAccess", "UnusedReturnValue"})
 public final class RequestTemplate implements Serializable {
 
+  /**
+   *  ? < ! {  等 正则匹配
+   */
   private static final Pattern QUERY_STRING_PATTERN = Pattern.compile("(?<!\\{)\\?");
+  /**
+   * queryTemplate 的容器
+   */
   private final Map<String, QueryTemplate> queries = new LinkedHashMap<>();
+  /**
+   * HeaderTemplate 的容器  该容器使用忽略大小写的 Comparable 对象
+   */
   private final Map<String, HeaderTemplate> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+  /**
+   * 原目标
+   */
   private String target;
+  /**
+   * 碎片
+   */
   private String fragment;
+  /**
+   * 代表未解析
+   */
   private boolean resolved = false;
+  /**
+   * url 模板
+   */
   private UriTemplate uriTemplate;
+  /**
+   * 请求方式
+   */
   private HttpMethod method;
   private transient Charset charset = Util.UTF_8;
   private Request.Body body = Request.Body.empty();
   private boolean decodeSlash = true;
+  /**
+   * 参数默认不使用拼接符
+   */
   private CollectionFormat collectionFormat = CollectionFormat.EXPLODED;
 
   /**
@@ -94,6 +122,7 @@ public final class RequestTemplate implements Serializable {
    *
    * @param requestTemplate to copy from.
    * @return a new Request Template.
+   * 使用一个存在的reqTemplate 来构建一个新对象
    */
   public static RequestTemplate from(RequestTemplate requestTemplate) {
     RequestTemplate template =
@@ -102,6 +131,8 @@ public final class RequestTemplate implements Serializable {
             requestTemplate.method, requestTemplate.charset,
             requestTemplate.body, requestTemplate.decodeSlash, requestTemplate.collectionFormat);
 
+
+    // 设置 queryMap 和 headerMap
     if (!requestTemplate.queries().isEmpty()) {
       template.queries.putAll(requestTemplate.queries);
     }
@@ -141,6 +172,7 @@ public final class RequestTemplate implements Serializable {
    *
    * @param variables containing the variable values to use when resolving expressions.
    * @return a new Request Template with all of the variables resolved.
+   * 以本实例作为模板 补充 传入的变量map 生成一个新对象
    */
   public RequestTemplate resolve(Map<String, ?> variables) {
 
@@ -149,26 +181,31 @@ public final class RequestTemplate implements Serializable {
     /* create a new template form this one, but explicitly */
     RequestTemplate resolved = RequestTemplate.from(this);
 
+    // 如果 url 模板为空 创建一个空模板
     if (this.uriTemplate == null) {
       /* create a new uri template using the default root */
       this.uriTemplate = UriTemplate.create("", !this.decodeSlash, this.charset);
     }
 
+    // 为url 填充变量
     uri.append(this.uriTemplate.expand(variables));
 
     /*
      * for simplicity, combine the queries into the uri and use the resulting uri to seed the
      * resolved template.
+     * 如果查询变量不为空
      */
     if (!this.queries.isEmpty()) {
       /*
        * since we only want to keep resolved query values, reset any queries on the resolved copy
+       * 清除 queryMap
        */
       resolved.queries(Collections.emptyMap());
       StringBuilder query = new StringBuilder();
       Iterator<QueryTemplate> queryTemplates = this.queries.values().iterator();
 
       while (queryTemplates.hasNext()) {
+        // 为每个 queryExpand 填充变量后 填充到query中
         QueryTemplate queryTemplate = queryTemplates.next();
         String queryExpanded = queryTemplate.expand(variables);
         if (Util.isNotBlank(queryExpanded)) {
@@ -181,6 +218,7 @@ public final class RequestTemplate implements Serializable {
 
       String queryString = query.toString();
       if (!queryString.isEmpty()) {
+        // 追加 or 填充 requestParam
         Matcher queryMatcher = QUERY_STRING_PATTERN.matcher(uri);
         if (queryMatcher.find()) {
           /* the uri already has a query, so any additional queries should be appended */
@@ -193,6 +231,7 @@ public final class RequestTemplate implements Serializable {
     }
 
     /* add the uri to result */
+    // 将修改后的url 设置到新对象中
     resolved.uri(uri.toString());
 
     /* headers */
@@ -200,6 +239,7 @@ public final class RequestTemplate implements Serializable {
       /*
        * same as the query string, we only want to keep resolved values, so clear the header map on
        * the resolved instance
+       * 清除 headerMap
        */
       resolved.headers(Collections.emptyMap());
       for (HeaderTemplate headerTemplate : this.headers.values()) {
@@ -209,15 +249,18 @@ public final class RequestTemplate implements Serializable {
           /* split off the header values and add it to the resolved template */
           String headerValues = header.substring(header.indexOf(" ") + 1);
           if (!headerValues.isEmpty()) {
+            // 重新设置请求头
             resolved.header(headerTemplate.getName(), headerValues);
           }
         }
       }
     }
 
+    // 使用变量 拓展body
     resolved.body(this.body.expand(variables));
 
     /* mark the new template resolved */
+    // 代表该数据已经被解析过
     resolved.resolved = true;
     return resolved;
   }
@@ -244,6 +287,7 @@ public final class RequestTemplate implements Serializable {
    *
    * @return a new Request instance.
    * @throws IllegalStateException if this template has not been resolved.
+   * 从已解析的 reqTemplate 中 获取 req 对象
    */
   public Request request() {
     if (!this.resolved) {
@@ -296,9 +340,11 @@ public final class RequestTemplate implements Serializable {
    *
    * @param decodeSlash if slash literals should not be encoded.
    * @return a RequestTemplate for chaining.
+   * 设置是否应该解析 "/"
    */
   public RequestTemplate decodeSlash(boolean decodeSlash) {
     this.decodeSlash = decodeSlash;
+    // 这步有什么意义 ???
     this.uriTemplate =
         UriTemplate.create(this.uriTemplate.toString(), !this.decodeSlash, this.charset);
     return this;
@@ -394,11 +440,13 @@ public final class RequestTemplate implements Serializable {
    * Set the uri for the request.
    *
    * @param uri to use, must be a relative uri.
-   * @param append if the uri should be appended, if the uri is already set.
+   * @param append if the uri should be appended, if the uri is already set.  代表是否在原url 上追加
    * @return a RequestTemplate for chaining.
+   * 设置 url 属性 注意返回的是原对象
    */
   public RequestTemplate uri(String uri, boolean append) {
     /* validate and ensure that the url is always a relative one */
+    // 不允许使用绝对路径
     if (UriUtils.isAbsolute(uri)) {
       throw new IllegalArgumentException("url values must be not be absolute.");
     }
@@ -420,12 +468,14 @@ public final class RequestTemplate implements Serializable {
       String queryString = uri.substring(queryMatcher.start() + 1);
 
       /* parse the query string */
+      // 提取查询模板 就是从匹配到的字符串中 找到 数据对 并追加到 queryMap 中
       this.extractQueryTemplates(queryString, append);
 
       /* reduce the uri to the path */
       uri = uri.substring(0, queryMatcher.start());
     }
 
+    // 代表存在碎片信息
     int fragmentIndex = uri.indexOf('#');
     if (fragmentIndex > -1) {
       fragment = uri.substring(fragmentIndex);
@@ -434,6 +484,7 @@ public final class RequestTemplate implements Serializable {
 
     /* replace the uri template */
     if (append && this.uriTemplate != null) {
+      // 为 urlTemplate 追加数据  内部就是 urlTemplate.toString + uri
       this.uriTemplate = UriTemplate.append(this.uriTemplate, uri);
     } else {
       this.uriTemplate = UriTemplate.create(uri, !this.decodeSlash, this.charset);
@@ -446,6 +497,7 @@ public final class RequestTemplate implements Serializable {
    *
    * @param target host for this request. Must be an absolute target.
    * @return a RequestTemplate for chaining.
+   * 通过传入的 字符串生成一个 req模板对象  target 可能就是一个 uri 对象
    */
   public RequestTemplate target(String target) {
     /* target can be empty */
@@ -457,6 +509,7 @@ public final class RequestTemplate implements Serializable {
     if (!UriUtils.isAbsolute(target)) {
       throw new IllegalArgumentException("target values must be absolute.");
     }
+    // 去除尾部 /
     if (target.endsWith("/")) {
       target = target.substring(0, target.length() - 1);
     }
@@ -464,9 +517,11 @@ public final class RequestTemplate implements Serializable {
       /* parse the target */
       URI targetUri = URI.create(target);
 
+      // 拆分出 ? 后面的部分
       if (Util.isNotBlank(targetUri.getRawQuery())) {
         /*
          * target has a query string, we need to make sure that they are recorded as queries
+         * 将 target 的 查询条件 追加到 本 requestTemplate 中
          */
         this.extractQueryTemplates(targetUri.getRawQuery(), true);
       }
@@ -488,14 +543,18 @@ public final class RequestTemplate implements Serializable {
    * template.
    *
    * @return the url
+   * 返回该 req的url 属性
    */
   public String url() {
 
     /* build the fully qualified url with all query parameters */
+    // 获取 path 信息
     StringBuilder url = new StringBuilder(this.path());
     if (!this.queries.isEmpty()) {
+      // 将queryMap 还原成字符串 并追加
       url.append(this.queryLine());
     }
+    // 追加片段
     if (fragment != null) {
       url.append(fragment);
     }
@@ -507,6 +566,7 @@ public final class RequestTemplate implements Serializable {
    * The Uri Path.
    *
    * @return the uri path.
+   * 返回path 信息
    */
   public String path() {
     /* build the fully qualified url with all query parameters */
@@ -529,9 +589,11 @@ public final class RequestTemplate implements Serializable {
    * List all of the template variable expressions for this template.
    *
    * @return a list of template variable names
+   * 获取 uriTemplate 上所有变量
    */
   public List<String> variables() {
     /* combine the variables from the uri, query, header, and body templates */
+    // 剥离 templateChunk 并将name 属性生成一个列表
     List<String> variables = new ArrayList<>(this.uriTemplate.getVariables());
 
     /* queries */
@@ -552,6 +614,7 @@ public final class RequestTemplate implements Serializable {
 
   /**
    * @see RequestTemplate#query(String, Iterable)
+   * 设置 查询参数
    */
   public RequestTemplate query(String name, String... values) {
     if (values == null) {
@@ -595,10 +658,12 @@ public final class RequestTemplate implements Serializable {
    * @param values for the parameter, may be expressions.
    * @param collectionFormat to use when resolving collection based query variables.
    * @return a RequestTemplate for chaining.
+   * 将参数追加到 queryMap 中
    */
   private RequestTemplate appendQuery(String name,
                                       Iterable<String> values,
                                       CollectionFormat collectionFormat) {
+    // 如果values不存在 要将原先的 query 也清除
     if (!values.iterator().hasNext()) {
       /* empty value, clear the existing values */
       this.queries.remove(name);
@@ -621,6 +686,7 @@ public final class RequestTemplate implements Serializable {
    *
    * @param queries to use for this request.
    * @return a RequestTemplate for chaining.
+   * 设置查询参数
    */
   @SuppressWarnings("unused")
   public RequestTemplate queries(Map<String, Collection<String>> queries) {
@@ -637,6 +703,7 @@ public final class RequestTemplate implements Serializable {
    * Return an immutable Map of all Query Parameters and their values.
    *
    * @return registered Query Parameters.
+   * 获取 查询参数
    */
   public Map<String, Collection<String>> queries() {
     Map<String, Collection<String>> queryMap = new LinkedHashMap<>();
@@ -652,6 +719,7 @@ public final class RequestTemplate implements Serializable {
 
   /**
    * @see RequestTemplate#header(String, Iterable)
+   * 设置请求头信息
    */
   public RequestTemplate header(String name, String... values) {
     return header(name, Arrays.asList(values));
@@ -672,6 +740,7 @@ public final class RequestTemplate implements Serializable {
       values = Collections.emptyList();
     }
 
+    // 追加请求头信息
     return appendHeader(name, values);
   }
 
@@ -688,6 +757,7 @@ public final class RequestTemplate implements Serializable {
       this.headers.remove(name);
       return this;
     }
+    // 存在的话 执行指定的逻辑后更新 value  不存在 就执行指定的逻辑将数据填充到容器中
     this.headers.compute(name, (headerName, headerTemplate) -> {
       if (headerTemplate == null) {
         return HeaderTemplate.create(headerName, values);
@@ -703,6 +773,7 @@ public final class RequestTemplate implements Serializable {
    *
    * @param headers to use.
    * @return a RequestTemplate for chaining.
+   * 设置请求头信息
    */
   public RequestTemplate headers(Map<String, Collection<String>> headers) {
     if (headers != null && !headers.isEmpty()) {
@@ -764,10 +835,12 @@ public final class RequestTemplate implements Serializable {
    *
    * @param body to send.
    * @return a RequestTemplate for chaining.
+   * 设置 body 属性
    */
   public RequestTemplate body(Request.Body body) {
     this.body = body;
 
+    // 设置长度信息
     header(CONTENT_LENGTH);
     if (body.length() > 0) {
       header(CONTENT_LENGTH, String.valueOf(body.length()));
@@ -829,6 +902,7 @@ public final class RequestTemplate implements Serializable {
    *
    * @param variable to look for.
    * @return true if the variable exists, false otherwise.
+   * 查看请求变量中是否存在 某个 variable
    */
   public boolean hasRequestVariable(String variable) {
     return this.getRequestVariables().contains(variable);
@@ -838,6 +912,7 @@ public final class RequestTemplate implements Serializable {
    * Retrieve all uri, header, and query template variables.
    *
    * @return a List of all the variable names.
+   * 获取所有变量 包含 uri 本身的 还有 query header
    */
   public Collection<String> getRequestVariables() {
     final Collection<String> variables = new LinkedHashSet<>(this.uriTemplate.getVariables());
@@ -861,10 +936,12 @@ public final class RequestTemplate implements Serializable {
    * The Query String for the template. Expressions are not resolved.
    *
    * @return the Query String.
+   * 将 queryTemplate 还原成一个字符串
    */
   public String queryLine() {
     StringBuilder queryString = new StringBuilder();
 
+    // queryMap 不为空
     if (!this.queries.isEmpty()) {
       Iterator<QueryTemplate> iterator = this.queries.values().iterator();
       while (iterator.hasNext()) {
@@ -891,9 +968,15 @@ public final class RequestTemplate implements Serializable {
     return result;
   }
 
+  /**
+   * 提取查询参数模板
+   * @param queryString
+   * @param append
+   */
   private void extractQueryTemplates(String queryString, boolean append) {
     /* split the query string up into name value pairs */
     Map<String, List<String>> queryParameters =
+            // 按照 & 进行拆分
         Arrays.stream(queryString.split("&"))
             .map(this::splitQueryParameter)
             .collect(Collectors.groupingBy(
@@ -902,13 +985,20 @@ public final class RequestTemplate implements Serializable {
                 Collectors.mapping(Entry::getValue, Collectors.toList())));
 
     /* add them to this template */
+    // 如果不是 追加就清空 queryMap
     if (!append) {
       /* clear the queries and use the new ones */
       this.queries.clear();
     }
+    // 设置 解析出来的参数到 queryMap
     queryParameters.forEach(this::query);
   }
 
+  /**
+   * 拆分 &x1=1  ---> x1, 1
+   * @param pair
+   * @return
+   */
   private SimpleImmutableEntry<String, String> splitQueryParameter(String pair) {
     int eq = pair.indexOf("=");
     final String name = (eq > 0) ? pair.substring(0, eq) : pair;

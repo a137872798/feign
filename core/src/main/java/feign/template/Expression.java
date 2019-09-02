@@ -37,6 +37,12 @@ abstract class Expression implements TemplateChunk {
     Optional.ofNullable(pattern).ifPresent(s -> this.pattern = Pattern.compile(s));
   }
 
+  /**
+   * 拓展数据
+   * @param variable
+   * @param encode
+   * @return
+   */
   abstract String expand(Object variable, boolean encode);
 
   public String getName() {

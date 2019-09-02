@@ -22,13 +22,23 @@ import feign.template.BodyTemplate;
 
 /**
  * An immutable request to an http server.
+ * HTTP 请求对象抽象
  */
 public final class Request {
 
   public static class Body {
 
+    /**
+     * 具体数据
+     */
     private final byte[] data;
+    /**
+     * 该数据使用的字符集
+     */
     private final Charset encoding;
+    /**
+     * 一个模板对象
+     */
     private final BodyTemplate bodyTemplate;
 
     private Body(byte[] data, Charset encoding, BodyTemplate bodyTemplate) {
@@ -38,13 +48,23 @@ public final class Request {
       this.bodyTemplate = bodyTemplate;
     }
 
+    /**
+     * 为 req 对象追加某些属性
+     * @param variables
+     * @return
+     */
     public Request.Body expand(Map<String, ?> variables) {
       if (bodyTemplate == null)
         return this;
 
+      // 追加属性后返回一个新的  Body对象
       return encoded(bodyTemplate.expand(variables).getBytes(encoding), encoding);
     }
 
+    /**
+     * 获取变量
+     * @return
+     */
     public List<String> getVariables() {
       if (bodyTemplate == null)
         return Collections.emptyList();
@@ -84,6 +104,9 @@ public final class Request {
 
   }
 
+  /**
+   * 请求方式枚举
+   */
   public enum HttpMethod {
     GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE, PATCH
   }
@@ -125,11 +148,12 @@ public final class Request {
   /**
    * Builds a Request. All parameters must be effectively immutable, via safe copies.
    *
-   * @param httpMethod for the request.
-   * @param url for the request.
-   * @param headers to include.
-   * @param body of the request, can be {@literal null}
+   * @param httpMethod for the request.  请求方式
+   * @param url for the request.         目标url
+   * @param headers to include.          请求头信息
+   * @param body of the request, can be {@literal null}   请求体
    * @return a Request
+   * 根据指定参数生成一个 Req 对象
    */
   public static Request create(HttpMethod httpMethod,
                                String url,
@@ -223,11 +247,21 @@ public final class Request {
   /*
    * Controls the per-request settings currently required to be implemented by all {@link Client
    * clients}
+   * http的某些追加选项
    */
   public static class Options {
 
+    /**
+     * 连接超时时间
+     */
     private final int connectTimeoutMillis;
+    /**
+     * 读取超时时间
+     */
     private final int readTimeoutMillis;
+    /**
+     * 是否允许重定向 默认是true
+     */
     private final boolean followRedirects;
 
     public Options(int connectTimeoutMillis, int readTimeoutMillis, boolean followRedirects) {

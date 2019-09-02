@@ -26,16 +26,32 @@ import static feign.Util.emptyToNull;
  * closer match to {@code WebTarget}.
  *
  * @param <T> type of the interface this target applies to.
+ *           被处理的目标对象
  */
 public interface Target<T> {
 
   /* The type of the interface this target applies to. ex. {@code Route53}. */
+
+  /**
+   * 代表 目标对象的 类型
+   * @return
+   */
   Class<T> type();
 
   /* configuration key associated with this target. For example, {@code route53}. */
+
+  /**
+   * 对应配置的 name
+   * @return
+   */
   String name();
 
   /* base HTTP URL of the target. For example, {@code https://api/v2}. */
+
+  /**
+   * url 信息
+   * @return
+   */
   String url();
 
   /**
@@ -60,9 +76,14 @@ public interface Target<T> {
    * This call is similar to {@code
    * javax.ws.rs.client.WebTarget.request()}, except that we expect transient, but necessary
    * decoration to be applied on invocation.
+   * 传入 模板对象 生成req
    */
   public Request apply(RequestTemplate input);
 
+  /**
+   * 硬编码 ???
+   * @param <T>
+   */
   public static class HardCodedTarget<T> implements Target<T> {
 
     private final Class<T> type;
@@ -95,11 +116,18 @@ public interface Target<T> {
     }
 
     /* no authentication or other special activity. just insert the url. */
+
+    /**
+     * 通过模板对象生成 req
+     * @param input
+     * @return
+     */
     @Override
     public Request apply(RequestTemplate input) {
       if (input.url().indexOf("http") != 0) {
         input.target(url());
       }
+      // 直接返回 模板的 req 对象
       return input.request();
     }
 
@@ -133,6 +161,10 @@ public interface Target<T> {
     }
   }
 
+  /**
+   * 空对象
+   * @param <T>
+   */
   public static final class EmptyTarget<T> implements Target<T> {
 
     private final Class<T> type;

@@ -31,6 +31,7 @@ import static feign.ExceptionPropagationPolicy.NONE;
  * Feign's purpose is to ease development against http apis that feign restfulness. <br>
  * In implementation, Feign is a {@link Feign#newInstance factory} for generating {@link Target
  * targeted} http apis.
+ * 该对象的作用是 简化 restful 请求 也就是 主干类
  */
 public abstract class Feign {
 
@@ -63,11 +64,13 @@ public abstract class Feign {
    * @param targetType {@link feign.Target#type() type} of the Feign interface.
    * @param method invoked method, present on {@code type} or its super.
    * @see MethodMetadata#configKey()
+   * 通过class + method 生成唯一标识
    */
   public static String configKey(Class targetType, Method method) {
     StringBuilder builder = new StringBuilder();
     builder.append(targetType.getSimpleName());
     builder.append('#').append(method.getName()).append('(');
+    // 获取方法的参数类型
     for (Type param : method.getGenericParameterTypes()) {
       param = Types.resolve(targetType, targetType, param);
       builder.append(Types.getRawType(param).getSimpleName()).append(',');
@@ -92,17 +95,38 @@ public abstract class Feign {
    */
   public abstract <T> T newInstance(Target<T> target);
 
+  /**
+   * 构建器对象
+   */
   public static class Builder {
 
+    /**
+     * 一组请求拦截器对象  拦截的单位是 RequestTemplate
+     */
     private final List<RequestInterceptor> requestInterceptors =
         new ArrayList<RequestInterceptor>();
     private Logger.Level logLevel = Logger.Level.NONE;
+    /**
+     * 默认的合同对象 具备抽取目标class 方法元数据信息的能力
+     */
     private Contract contract = new Contract.Default();
+    /**
+     * 默认的 client 对象 适配其他框架 估计就是 更换了client
+     */
     private Client client = new Client.Default(null, null);
+    /**
+     * 重试对象 可以生成下次重试时间 判断 是否允许重试等
+     */
     private Retryer retryer = new Retryer.Default();
     private Logger logger = new NoOpLogger();
+
+    // 默认的编解码器
     private Encoder encoder = new Encoder.Default();
     private Decoder decoder = new Decoder.Default();
+
+    /**
+     * 默认对象是 将 Obj 的 所有 field 抽取到一个容器中
+     */
     private QueryMapEncoder queryMapEncoder = new QueryMapEncoder.Default();
     private ErrorDecoder errorDecoder = new ErrorDecoder.Default();
     private Options options = new Options();
@@ -251,10 +275,16 @@ public abstract class Feign {
       return build().newInstance(target);
     }
 
+    /**
+     * 构建Feign 对象
+     * @return
+     */
     public Feign build() {
+      // 使用设置的内部属性生成 工厂对象
       SynchronousMethodHandler.Factory synchronousMethodHandlerFactory =
           new SynchronousMethodHandler.Factory(client, retryer, requestInterceptors, logger,
               logLevel, decode404, closeAfterDecode, propagationPolicy);
+      // 初始化该对象只是做一些基本的属性设置
       ParseHandlersByName handlersByName =
           new ParseHandlersByName(contract, options, encoder, decoder, queryMapEncoder,
               errorDecoder, synchronousMethodHandlerFactory);
@@ -262,9 +292,18 @@ public abstract class Feign {
     }
   }
 
+  /**
+   *  对应 map() 函数 将 res 进行解码
+   */
   static class ResponseMappingDecoder implements Decoder {
 
+    /**
+     * 实现 map 接口
+     */
     private final ResponseMapper mapper;
+    /**
+     * 解码器对象
+     */
     private final Decoder delegate;
 
     ResponseMappingDecoder(ResponseMapper mapper, Decoder decoder) {
@@ -274,6 +313,7 @@ public abstract class Feign {
 
     @Override
     public Object decode(Response response, Type type) throws IOException {
+      // 转换后进行解码
       return delegate.decode(mapper.map(response, type), type);
     }
   }

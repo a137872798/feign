@@ -24,6 +24,7 @@ import java.util.Collection;
  * These specific cases are inspired by the <a href="http://swagger.io/specification/">OpenAPI
  * specification</a>.
  * </p>
+ * 针对集合参数 使用特殊的编码方式
  */
 public enum CollectionFormat {
   /** Comma separated values, eg foo=bar,baz */

@@ -170,7 +170,9 @@ public class Template {
    */
   public List<String> getVariables() {
     return this.templateChunks.stream()
+            // 只需要 Expression 的子类
         .filter(templateChunk -> Expression.class.isAssignableFrom(templateChunk.getClass()))
+            // 获取 name 属性
         .map(templateChunk -> ((Expression) templateChunk).getName())
         .filter(Objects::nonNull)
         .collect(Collectors.toList());
