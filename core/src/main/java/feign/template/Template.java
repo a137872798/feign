@@ -116,13 +116,19 @@ public class Template {
     return resolved.toString();
   }
 
+  /**
+   * 从 map 中寻找 expression 的替代数据并进行替换
+   * @param expression
+   * @param variables
+   * @return
+   */
   protected String resolveExpression(Expression expression, Map<String, ?> variables) {
     String resolved = null;
     Object value = variables.get(expression.getName());
     if (value != null) {
       String expanded = expression.expand(value, this.encode.isEncodingRequired());
       if (Util.isNotBlank(expanded)) {
-        if (this.encodeSlash) {
+        if (this.encodeSlash) { // "/"  都被替换成了 %2F
           logger.fine("Explicit slash decoding specified, decoding all slashes in uri");
           expanded = expanded.replaceAll("/", "%2F");
         }
@@ -156,7 +162,9 @@ public class Template {
    */
   private String encode(String value, boolean query) {
     if (this.encode.isEncodingRequired()) {
+                      // 针对查询参数的 加密
       return query ? UriUtils.queryEncode(value, this.charset)
+              // 代表针对 path 的加密
           : UriUtils.pathEncode(value, this.charset);
     } else {
       return value;
@@ -166,7 +174,7 @@ public class Template {
   /**
    * Variable names contained in the template.
    *
-   * @return a List of Variable Names.
+   * @return a List of Variable Names.  这里就是 通过解析 url 中 {} 的内容 判断有哪些变量
    */
   public List<String> getVariables() {
     return this.templateChunks.stream()
@@ -212,11 +220,14 @@ public class Template {
      * string and if so, keep track of where it starts.
      */
     Matcher queryStringMatcher = QUERY_STRING_PATTERN.matcher(this.template);
+    // 判断是否存在查询参数 如果是 生成 UrlTemplate 一般是 不会存在的 因为 之前已经尝试匹配过一次了
     if (queryStringMatcher.find()) {
       /*
        * the template contains a query string, split the template into two parts, the path and query
        */
+      // 前面的 部分就是 url
       String path = this.template.substring(0, queryStringMatcher.start());
+      // 后面的 代表 查询参数 name=123&age=111
       String query = this.template.substring(queryStringMatcher.end() - 1);
       // 按照特定符号进行解析
       this.parseFragment(path, false);
@@ -245,6 +256,7 @@ public class Template {
         /* it's an expression, defer encoding until resolution */
         FragmentType type = (query) ? FragmentType.QUERY : FragmentType.PATH_SEGMENT;
 
+        // 该对象是 path 中 {xxx} 内部的 xxx 抽象生成的
         Expression expression = Expressions.create(chunk, type);
         if (expression == null) {
           this.templateChunks.add(Literal.create(encode(chunk, query)));
@@ -285,10 +297,10 @@ public class Template {
    * Splits a Uri into Chunks that exists inside and outside of an expression, delimited by curly
    * braces "{}". Nested expressions are treated as literals, for example "foo{bar{baz}}" will be
    * treated as "foo, {bar{baz}}". Inspired by Apache CXF Jax-RS.
-   * 使用 词法解析器对象
+   * 使用 词法解析器对象   针对 url 中携带的 {} 占位符
    */
   static class ChunkTokenizer {
-
+    // {} 中的内容
     private List<String> tokens = new ArrayList<>();
     private int index;
 

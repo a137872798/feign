@@ -267,10 +267,23 @@ public abstract class Feign {
       return this;
     }
 
+    /**
+     * 调用 target 时 会请求对应的 url 并返回期望的类型 (apiType 代表 对应的接口类型 它的方法上携带了 需要的 http header 和 query)
+     * @param apiType
+     * @param url
+     * @param <T>
+     * @return
+     */
     public <T> T target(Class<T> apiType, String url) {
       return target(new HardCodedTarget<T>(apiType, url));
     }
 
+    /**
+     * 在初始化完 Target 时  就使用工厂对象 构建实例
+     * @param target
+     * @param <T>
+     * @return
+     */
     public <T> T target(Target<T> target) {
       return build().newInstance(target);
     }
@@ -280,7 +293,7 @@ public abstract class Feign {
      * @return
      */
     public Feign build() {
-      // 使用设置的内部属性生成 工厂对象
+      // 使用设置的内部属性生成 工厂对象  成员对象都有自己的默认值
       SynchronousMethodHandler.Factory synchronousMethodHandlerFactory =
           new SynchronousMethodHandler.Factory(client, retryer, requestInterceptors, logger,
               logLevel, decode404, closeAfterDecode, propagationPolicy);

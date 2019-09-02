@@ -48,7 +48,7 @@ public class ReflectiveFeign extends Feign {
   /**
    * creates an api binding to the {@code target}. As this invokes reflection, care should be taken
    * to cache the result.
-   * 处理过 target 后 返回
+   * 通过传入的 target 对象进行初始化 Target 包含了 需要返回的结果类型， 目标url 和 name 属性
    */
   @SuppressWarnings("unchecked")
   @Override
@@ -58,7 +58,9 @@ public class ReflectiveFeign extends Feign {
     Map<Method, MethodHandler> methodToHandler = new LinkedHashMap<Method, MethodHandler>();
     List<DefaultMethodHandler> defaultMethodHandlers = new LinkedList<DefaultMethodHandler>();
 
+    // 获取 api接口的所有方法
     for (Method method : target.type().getMethods()) {
+      // 跳过 Object 方法
       if (method.getDeclaringClass() == Object.class) {
         continue;
       } else if (Util.isDefault(method)) {
@@ -66,10 +68,13 @@ public class ReflectiveFeign extends Feign {
         defaultMethodHandlers.add(handler);
         methodToHandler.put(method, handler);
       } else {
+        // 默认情况是走这里  找到 api接口中抽取 参数后生成的 Handler对象
         methodToHandler.put(method, nameToHandler.get(Feign.configKey(target.type(), method)));
       }
     }
+    // 生成动态代理处理器
     InvocationHandler handler = factory.create(target, methodToHandler);
+    // 生成动态代理对象
     T proxy = (T) Proxy.newProxyInstance(target.type().getClassLoader(),
         new Class<?>[] {target.type()}, handler);
 
@@ -80,7 +85,7 @@ public class ReflectiveFeign extends Feign {
   }
 
   /**
-   * 特殊的handler 对象
+   * fegin 的 动态代理对象 在执行invoke 方法时 通过匹配 method 找到对应的methodHandle 并执行invoke
    */
   static class FeignInvocationHandler implements InvocationHandler {
 
@@ -169,12 +174,12 @@ public class ReflectiveFeign extends Feign {
     }
 
     /**
-     * 将目标对象的 方法 处理器抽取出来
+     * 将目标对象(api接口对象)的 方法 处理器抽取出来
      * @param key
      * @return
      */
     public Map<String, MethodHandler> apply(Target key) {
-      // 抽取该class 的 方法元数据信息
+      // 抽取该api接口对象 的 方法元数据信息
       List<MethodMetadata> metadata = contract.parseAndValidatateMetadata(key.type());
       Map<String, MethodHandler> result = new LinkedHashMap<String, MethodHandler>();
       for (MethodMetadata md : metadata) {
@@ -182,7 +187,7 @@ public class ReflectiveFeign extends Feign {
         // formParam 代表 该方法的参数携带@Param 注解
         if (!md.formParams().isEmpty() && md.template().bodyTemplate() == null) {
           buildTemplate = new BuildFormEncodedTemplateFromArgs(md, encoder, queryMapEncoder);
-        // 如果存在 body 的下标
+        // 如果存在 body 的下标  也就是 参数列表中 存在 普通实体类型
         } else if (md.bodyIndex() != null) {
           buildTemplate = new BuildEncodedTemplateFromArgs(md, encoder, queryMapEncoder);
         } else {
@@ -191,6 +196,7 @@ public class ReflectiveFeign extends Feign {
         }
         // config 作为唯一确定method 的标识 通过工厂对象 构建 methodHandler
         result.put(md.configKey(),
+            // 通过工厂对象 生成 methodHandler 对象
             factory.create(key, md, buildTemplate, options, decoder, errorDecoder));
       }
       return result;
@@ -252,7 +258,7 @@ public class ReflectiveFeign extends Feign {
      */
     @Override
     public RequestTemplate create(Object[] argv) {
-      // 默认是一个空对象
+      // 生成一个 副本对象
       RequestTemplate mutable = RequestTemplate.from(metadata.template());
       // 如果参数中 有 URI 类型
       if (metadata.urlIndex() != null) {
@@ -466,10 +472,11 @@ public class ReflectiveFeign extends Feign {
     protected RequestTemplate resolve(Object[] argv,
                                       RequestTemplate mutable,
                                       Map<String, Object> variables) {
-      // 获取 body 信息
+      // 通过之前记录的 实体参数下标 获取真正的 实体参数
       Object body = argv[metadata.bodyIndex()];
       checkArgument(body != null, "Body parameter %s was null", metadata.bodyIndex());
       try {
+        // 这里不能使用 默认的编码器 处理 因为只支持 String 类型 如果存在实体的话 一般是要配合 gsonEncoder 变成 json 格式
         encoder.encode(body, metadata.bodyType(), mutable);
       } catch (EncodeException e) {
         throw e;

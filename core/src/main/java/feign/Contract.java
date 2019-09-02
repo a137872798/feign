@@ -78,6 +78,7 @@ public interface Contract {
         }
         // 将对应方法 的 元数据信息抽取出来
         MethodMetadata metadata = parseAndValidateMetadata(targetType, method);
+        // 不允许出现 重写接口 比如 父接口 和子接口有相同的方法
         checkState(!result.containsKey(metadata.configKey()), "Overrides unsupported: %s",
             metadata.configKey());
         result.put(metadata.configKey(), metadata);
@@ -99,12 +100,12 @@ public interface Contract {
      */
     protected MethodMetadata parseAndValidateMetadata(Class<?> targetType, Method method) {
       MethodMetadata data = new MethodMetadata();
-      // 设置返回类型
+      // 设置返回类型  传入的是一个 api接口 然后每个 方法 的返回类型信息都会保存 之后 生成一个代理对象 之后可以指定调用 某个方法 返回对应的结果
       data.returnType(Types.resolve(targetType, targetType, method.getGenericReturnType()));
       // configKey 看来是 一个class+method 的唯一标识
       data.configKey(Feign.configKey(targetType, method));
 
-      // 尝试从目标类获取 Header 注解信息 并将数据转换成 请求头信息 填充到data 中
+      // 尝试从目标类获取 Header 注解信息 并将数据转换成 请求头信息 填充到data 中 如果存在上级接口 就将 请求头数据 整合起来
       if (targetType.getInterfaces().length == 1) {
         processAnnotationOnClass(data, targetType.getInterfaces()[0]);
       }
@@ -135,11 +136,12 @@ public interface Contract {
         // 如果参数类型是 URL
         if (parameterTypes[i] == URI.class) {
           data.urlIndex(i);
-        // 代表该参数没有携带 Http 相关的注解 且类型不是 Options
+        // 代表该参数没有携带 Http 相关的注解 且类型不是 Options  一般就是 实体类型
         } else if (!isHttpAnnotation && parameterTypes[i] != Request.Options.class) {
           // 这种情况 必须确保首次进入这里 之前的参数都不包含 @Param 注解
           checkState(data.formParams().isEmpty(),
               "Body parameters cannot be used with form parameters.");
+          // 一个方法列表中只能存在一个 实体对象
           checkState(data.bodyIndex() == null, "Method has too many Body parameters: %s", method);
           // 设置 body 类型
           data.bodyIndex(i);
@@ -264,15 +266,15 @@ public interface Contract {
      */
     @Override
     protected void processAnnotationOnClass(MethodMetadata data, Class<?> targetType) {
-      // 如果待修饰的类 携带 Header注解
+      // 如果api接口类 携带 Header注解
       if (targetType.isAnnotationPresent(Headers.class)) {
         String[] headersOnType = targetType.getAnnotation(Headers.class).value();
         checkState(headersOnType.length > 0, "Headers annotation was empty on type %s.",
             targetType.getName());
-        // 将请求头信息转换成 map 对象
+        // 将请求头信息转换成 map 对象  请求头的格式 是 x:y
         Map<String, Collection<String>> headers = toMap(headersOnType);
         headers.putAll(data.template().headers());
-        // 更新header 对象
+        // 更新header 对象  会生成对应的 HeaderTemplate 对象
         data.template().headers(null); // to clear
         data.template().headers(headers);
       }
@@ -297,7 +299,7 @@ public interface Contract {
         checkState(emptyToNull(requestLine) != null,
             "RequestLine annotation was empty on method %s.", method.getName());
 
-        // 填入的数据必须满足某种格式
+        // 填入的数据必须满足某种格式  比如 GET /repos/{owner}/{repo}/contributors
         Matcher requestLineMatcher = REQUEST_LINE_PATTERN.matcher(requestLine);
         if (!requestLineMatcher.find()) {
           throw new IllegalStateException(String.format(
@@ -306,16 +308,16 @@ public interface Contract {
         } else {
           // 匹配的 第一个元素是 请求方式
           data.template().method(HttpMethod.valueOf(requestLineMatcher.group(1)));
-          // 匹配的 第二个元素是 url
+          // 匹配的 第二个元素是 url  在设置url 的时候 对应会初始化 UrlTemplate
           data.template().uri(requestLineMatcher.group(2));
         }
-        // decodeSlash 代表 是否要解析 斜线
+        // decodeSlash 代表 是否要解析 斜线  默认为true
         data.template().decodeSlash(RequestLine.class.cast(methodAnnotation).decodeSlash());
         // 设置 collection 参数的分隔符
         data.template()
             .collectionFormat(RequestLine.class.cast(methodAnnotation).collectionFormat());
 
-      // 如果参数是 Body 类型
+      // 如果参数是 Body 类型  比如     @Body("%7B\"login\":\"{login}\",\"type\":\"{type}\"%7D")  %7B %7D 代表是 JSON 格式
       } else if (annotationType == Body.class) {
         String body = Body.class.cast(methodAnnotation).value();
         checkState(emptyToNull(body) != null, "Body annotation was empty on method %s.",
@@ -357,7 +359,7 @@ public interface Contract {
           String name = paramAnnotation.value();
           checkState(emptyToNull(name) != null, "Param annotation was empty on param %s.",
               paramIndex);
-          // 设置 name 与 index 的关系到 data中
+          // 设置 name 与 index 的关系到 data中 (indexToName)
           nameParam(data, name, paramIndex);
           // 尝试获取参数的拓展信息
           Class<? extends Param.Expander> expander = paramAnnotation.expander();

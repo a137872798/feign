@@ -19,11 +19,8 @@ import java.io.IOException;
 import java.io.Reader;
 import java.lang.reflect.Type;
 import java.util.List;
-import feign.Feign;
-import feign.Logger;
-import feign.Param;
-import feign.RequestLine;
-import feign.Response;
+
+import feign.*;
 import feign.codec.Decoder;
 import static feign.Util.ensureClosed;
 
@@ -33,24 +30,33 @@ import static feign.Util.ensureClosed;
 public class GitHubExample {
 
   public static void main(String... args) {
+    // target 会将 该api接口 的各个 方法属性抽取出来 并返回一个 动态代理对象 之后在调用对应的方法时 发起http 请求并返回结果
     GitHub github = Feign.builder()
         .decoder(new GsonDecoder())
         .logger(new Logger.ErrorLogger())
         .logLevel(Logger.Level.BASIC)
+            // target 代表 发起的请求 和期望返回的结果类型
         .target(GitHub.class, "https://api.github.com");
 
     System.out.println("Let's fetch and print a list of the contributors to this library.");
+    // 真正发起请求 并返回结果
     List<Contributor> contributors = github.contributors("netflix", "feign");
     for (Contributor contributor : contributors) {
       System.out.println(contributor.login + " (" + contributor.contributions + ")");
     }
   }
 
-  interface GitHub {
+  /**
+   * fegin demo  首先选择一个接口 该接口的方法 会被抽取成元数据 信息 之后通过某个工厂生成具备 发起http请求的client 对象
+   */
+  @Headers({"A:C", "B:D"})
+  interface GitHub extends A{
 
-    @RequestLine("GET /repos/{owner}/{repo}/contributors")
+    @RequestLine("GET /repos/{owner}/{repo}/contributors?name=123&age=11")
     List<Contributor> contributors(@Param("owner") String owner, @Param("repo") String repo);
   }
+
+  interface A{}
 
   static class Contributor {
 
@@ -60,6 +66,7 @@ public class GitHubExample {
 
   /**
    * Here's how it looks to write a decoder. Note: you can instead use {@code feign-gson}!
+   * 设置解码器
    */
   static class GsonDecoder implements Decoder {
 
@@ -72,6 +79,7 @@ public class GitHubExample {
       }
       Reader reader = response.body().asReader();
       try {
+        // 将 数据体解析成需要的类型
         return gson.fromJson(reader, type);
       } catch (JsonIOException e) {
         if (e.getCause() != null && e.getCause() instanceof IOException) {

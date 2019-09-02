@@ -256,7 +256,7 @@ public final class RequestTemplate implements Serializable {
       }
     }
 
-    // 使用变量 拓展body
+    // 使用变量 拓展body 如果 存在 实体对象 那么 现在body 就是 对象 变成 byte[] 的样子 比如 一个实体对象被 处理成json格式 之后再这里 又变成byte[]
     resolved.body(this.body.expand(variables));
 
     /* mark the new template resolved */
@@ -465,6 +465,7 @@ public final class RequestTemplate implements Serializable {
      */
     Matcher queryMatcher = QUERY_STRING_PATTERN.matcher(uri);
     if (queryMatcher.find()) {
+      // 截取 ? 后面的 内容  截取到 age=123&name=xxx
       String queryString = uri.substring(queryMatcher.start() + 1);
 
       /* parse the query string */
@@ -472,6 +473,7 @@ public final class RequestTemplate implements Serializable {
       this.extractQueryTemplates(queryString, append);
 
       /* reduce the uri to the path */
+      // 去除掉 ? 后面的部分
       uri = uri.substring(0, queryMatcher.start());
     }
 
@@ -487,6 +489,7 @@ public final class RequestTemplate implements Serializable {
       // 为 urlTemplate 追加数据  内部就是 urlTemplate.toString + uri
       this.uriTemplate = UriTemplate.append(this.uriTemplate, uri);
     } else {
+      // 这里 使用的 decodeSlash 始终是 !(反的)
       this.uriTemplate = UriTemplate.create(uri, !this.decodeSlash, this.charset);
     }
     return this;

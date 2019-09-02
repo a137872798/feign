@@ -45,6 +45,7 @@ public class UriTemplate extends Template {
    * @param encodeSlash flag if slash characters should be encoded.
    * @param charset for the template.
    * @return a new Uri Template instance.
+   * template 是 去除掉 ? 后面部分 且 不带 主机名 的 url
    */
   public static UriTemplate create(String template, boolean encodeSlash, Charset charset) {
     return new UriTemplate(template, encodeSlash, charset);

@@ -26,7 +26,7 @@ import static feign.Util.emptyToNull;
  * closer match to {@code WebTarget}.
  *
  * @param <T> type of the interface this target applies to.
- *           被处理的目标对象
+ *           该对象一般是 一个接口 而且每个方法 上有对应的注解 标明了 http请求 需要的 header 和query
  */
 public interface Target<T> {
 
@@ -81,7 +81,8 @@ public interface Target<T> {
   public Request apply(RequestTemplate input);
 
   /**
-   * 硬编码 ???
+   * 代表固定的 target 对象 属性一开始就传入了  这是最基础的一种实现 如果是基于 ribbon 的 可能会通过传入serviceName 的方式 然后在内部开启
+   * 均衡负载
    * @param <T>
    */
   public static class HardCodedTarget<T> implements Target<T> {
@@ -90,6 +91,11 @@ public interface Target<T> {
     private final String name;
     private final String url;
 
+    /**
+     * 没有设置名字时  name = url   url还包含了 请求协议 比如 http
+     * @param type
+     * @param url
+     */
     public HardCodedTarget(Class<T> type, String url) {
       this(type, url, url);
     }
@@ -124,6 +130,7 @@ public interface Target<T> {
      */
     @Override
     public Request apply(RequestTemplate input) {
+      // 如果没有携带 http 信息 需要 获取 target 的 url 信息并追加到头部
       if (input.url().indexOf("http") != 0) {
         input.target(url());
       }
