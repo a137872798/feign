@@ -38,9 +38,13 @@ import static java.lang.String.format;
  * myAppProd.ribbon.listOfServers} configuration is set.
  *
  * @param <T> corresponds to {@link feign.Target#type()}
+ *           增强 target
  */
 public class LoadBalancingTarget<T> implements Target<T> {
 
+  /**
+   * 相同的 name 会对应到 同一个 均衡负载对象
+   */
   private final String name;
   private final String scheme;
   private final String path;
@@ -59,6 +63,13 @@ public class LoadBalancingTarget<T> implements Target<T> {
     this.lb = AbstractLoadBalancer.class.cast(getNamedLoadBalancer(name()));
   }
 
+  /**
+   * 初始化target对象
+   * @param type
+   * @param scheme
+   * @param name
+   * @param path
+   */
   protected LoadBalancingTarget(Class<T> type, String scheme, String name, String path) {
     this.type = checkNotNull(type, "type");
     this.scheme = checkNotNull(scheme, "scheme");
@@ -102,10 +113,17 @@ public class LoadBalancingTarget<T> implements Target<T> {
     return lb;
   }
 
+  /**
+   * 默认实现是通过硬编码 这里应该是通过均衡负载 获取其中一个 server 再生成请求对象
+   * @param input
+   * @return
+   */
   @Override
   public Request apply(RequestTemplate input) {
+    // lb 对象在 初始化时 会加载 serverList 到本地
     Server currentServer = lb.chooseServer(null);
     String url = format("%s://%s%s", scheme, currentServer.getHostPort(), path);
+    // 传入 url 后会生成一个 request 对象
     input.target(url);
     try {
       return input.request();

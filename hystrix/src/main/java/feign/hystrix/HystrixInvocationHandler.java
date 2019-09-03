@@ -33,12 +33,30 @@ import rx.Observable;
 import rx.Single;
 import static feign.Util.checkNotNull;
 
+/**
+ * 该对象增强了 fegin 的 动态代理处理器
+ */
 final class HystrixInvocationHandler implements InvocationHandler {
 
+  /**
+   * 该对象包含了 url name type 等信息
+   */
   private final Target<?> target;
+  /**
+   * methodHandler 路由
+   */
   private final Map<Method, MethodHandler> dispatch;
+  /**
+   * 接收异常对象 并返回实例
+   */
   private final FallbackFactory<?> fallbackFactory; // Nullable
+  /**
+   * 降级方法映射
+   */
   private final Map<Method, Method> fallbackMethodMap;
+  /**
+   * HystrixCommand 映射
+   */
   private final Map<Method, Setter> setterMethodMap;
 
   HystrixInvocationHandler(Target<?> target, Map<Method, MethodHandler> dispatch,
@@ -46,6 +64,7 @@ final class HystrixInvocationHandler implements InvocationHandler {
     this.target = checkNotNull(target, "target");
     this.dispatch = checkNotNull(dispatch, "dispatch");
     this.fallbackFactory = fallbackFactory;
+    // 只是开放访问权限
     this.fallbackMethodMap = toFallbackMethod(dispatch);
     this.setterMethodMap = toSetters(setterFactory, target, dispatch.keySet());
   }
@@ -82,6 +101,14 @@ final class HystrixInvocationHandler implements InvocationHandler {
     return result;
   }
 
+  /**
+   * 核心逻辑
+   * @param proxy
+   * @param method
+   * @param args
+   * @return
+   * @throws Throwable
+   */
   @Override
   public Object invoke(final Object proxy, final Method method, final Object[] args)
       throws Throwable {
@@ -101,11 +128,15 @@ final class HystrixInvocationHandler implements InvocationHandler {
       return toString();
     }
 
+    // 使用 hystrix 包装 命令
     HystrixCommand<Object> hystrixCommand =
+            // 只使用 commandGroupKey 和 commandKey 来初始化
         new HystrixCommand<Object>(setterMethodMap.get(method)) {
+          // run 代表实际执行的逻辑
           @Override
           protected Object run() throws Exception {
             try {
+              // 走 feign的逻辑 (feign 自带重试)
               return HystrixInvocationHandler.this.dispatch.get(method).invoke(args);
             } catch (Exception e) {
               throw e;
@@ -114,12 +145,14 @@ final class HystrixInvocationHandler implements InvocationHandler {
             }
           }
 
+          // 当 hystrix 执行 失败时 会走降级
           @Override
           protected Object getFallback() {
             if (fallbackFactory == null) {
               return super.getFallback();
             }
             try {
+              // 返回降级结果 看来降级对象一般是 api接口的 实现类 比如一个 MockXXX 这样接口本身方法执行失败时 该方法又可以直接在实现类找到匹配的实现
               Object fallback = fallbackFactory.create(getExecutionException());
               Object result = fallbackMethodMap.get(method).invoke(fallback, args);
               if (isReturnsHystrixCommand(method)) {

@@ -41,6 +41,7 @@ import static feign.Util.checkNotNull;
  * </pre>
  *
  * @param <T> the feign interface type
+ *           降级工厂
  */
 public interface FallbackFactory<T> {
 
@@ -49,13 +50,18 @@ public interface FallbackFactory<T> {
    *
    * @param cause corresponds to {@link com.netflix.hystrix.AbstractCommand#getExecutionException()}
    *        often, but not always an instance of {@link FeignException}.
+   *              根据传入的异常对象 返回一个 实例对象
    */
   T create(Throwable cause);
 
   /** Returns a constant fallback after logging the cause to FINE level. */
+  // 默认的降级工厂实现
   final class Default<T> implements FallbackFactory<T> {
     // jul to not add a dependency
     final Logger logger;
+    /**
+     * 默认遇到异常时 总是返回 一个实例
+     */
     final T constant;
 
     public Default(T constant) {

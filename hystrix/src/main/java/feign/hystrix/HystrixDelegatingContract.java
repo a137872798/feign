@@ -34,8 +34,12 @@ import rx.Single;
  * {@code Foo}.
  */
 // Visible for use in custom Hystrix invocation handlers
+  // 基于hystrix的 合同对象
 public final class HystrixDelegatingContract implements Contract {
 
+  /**
+   * 内部应该是维护基础的合同对象
+   */
   private final Contract delegate;
 
   public HystrixDelegatingContract(Contract delegate) {
@@ -44,14 +48,18 @@ public final class HystrixDelegatingContract implements Contract {
 
   @Override
   public List<MethodMetadata> parseAndValidatateMetadata(Class<?> targetType) {
+    // 使用代理对象 生成 方法元数据
     List<MethodMetadata> metadatas = this.delegate.parseAndValidatateMetadata(targetType);
 
+    // 下面的大概逻辑就是 原本返回类型是某种包装类型 需要获取它的实际类型
     for (MethodMetadata metadata : metadatas) {
       Type type = metadata.returnType();
 
+      // 如果返回类型是 HystrixCommand
       if (type instanceof ParameterizedType
           && ((ParameterizedType) type).getRawType().equals(HystrixCommand.class)) {
         Type actualType = resolveLastTypeParameter(type, HystrixCommand.class);
+        // 设置返回的实际类型
         metadata.returnType(actualType);
       } else if (type instanceof ParameterizedType
           && ((ParameterizedType) type).getRawType().equals(Observable.class)) {

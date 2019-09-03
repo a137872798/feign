@@ -36,19 +36,42 @@ import feign.Request;
 import feign.Response;
 import feign.Util;
 
+/**
+ * 继承自 ribbon 的 AbstractLBAwareClient 具备 均衡负载能力
+ */
 public final class LBClient extends
     AbstractLoadBalancerAwareClient<LBClient.RibbonRequest, LBClient.RibbonResponse> {
 
+  /**
+   * 连接超时时间
+   */
   private final int connectTimeout;
+  /**
+   * 读取超时时间
+   */
   private final int readTimeout;
+  /**
+   * client 配置
+   */
   private final IClientConfig clientConfig;
+  /**
+   * 允许重试的状态码
+   */
   private final Set<Integer> retryableStatusCodes;
+  /**
+   * 是否允许重定向
+   */
   private final Boolean followRedirects;
 
   public static LBClient create(ILoadBalancer lb, IClientConfig clientConfig) {
     return new LBClient(lb, clientConfig);
   }
 
+  /**
+   * 通过传入一个 字符串 拆分成 一组 异常code
+   * @param statusCodesString
+   * @return
+   */
   static Set<Integer> parseStatusCodes(String statusCodesString) {
     if (statusCodesString == null || statusCodesString.isEmpty()) {
       return Collections.emptySet();
@@ -60,15 +83,32 @@ public final class LBClient extends
     return codes;
   }
 
+  /**
+   * 初始化
+   * @param lb
+   * @param clientConfig
+   */
   LBClient(ILoadBalancer lb, IClientConfig clientConfig) {
     super(lb, clientConfig);
     this.clientConfig = clientConfig;
+
+    // 下面4种属性都是 直接从配置工厂中 获取 如果获取不到会使用默认值
     connectTimeout = clientConfig.get(CommonClientConfigKey.ConnectTimeout);
     readTimeout = clientConfig.get(CommonClientConfigKey.ReadTimeout);
     retryableStatusCodes = parseStatusCodes(clientConfig.get(LBClientFactory.RetryableStatusCodes));
     followRedirects = clientConfig.get(CommonClientConfigKey.FollowRedirects);
   }
 
+  /**
+   * 传入的 IClientConfig 应该是针对某次调用传入 覆盖的属性
+   * 在 ribbon 中 一般是通过调用 client 的 executeWithLoadBalancer 方法 对 serverList 均衡负载选择其中一个后 在 调用execute 生成结果
+   * 这里就是 替换掉了这个部分
+   * @param request
+   * @param configOverride
+   * @return
+   * @throws IOException
+   * @throws ClientException
+   */
   @Override
   public RibbonResponse execute(RibbonRequest request, IClientConfig configOverride)
       throws IOException, ClientException {
@@ -82,7 +122,9 @@ public final class LBClient extends
     } else {
       options = new Request.Options(connectTimeout, readTimeout);
     }
+    // 通过 feign的 client 对象发起请求
     Response response = request.client().execute(request.toRequest(), options);
+    // 如果可重试 这里抛出异常会在 rxjava.retry 中被捕获 从而进行重试
     if (retryableStatusCodes.contains(response.status())) {
       response.close();
       throw new ClientException(ClientException.ErrorType.SERVER_THROTTLED);
@@ -90,6 +132,12 @@ public final class LBClient extends
     return new RibbonResponse(request.getUri(), response);
   }
 
+  /**
+   * 该函数作用是 当 ribbon.execute() 遇到异常时 是否进行重试
+   * @param request
+   * @param requestConfig
+   * @return
+   */
   @Override
   public RequestSpecificRetryHandler getRequestSpecificRetryHandler(
                                                                     RibbonRequest request,
@@ -104,9 +152,16 @@ public final class LBClient extends
     }
   }
 
+
   static class RibbonRequest extends ClientRequest implements Cloneable {
 
+    /**
+     * 内部维护了 feign的req 对象
+     */
     private final Request request;
+    /**
+     * feign 的 client 对象
+     */
     private final Client client;
 
     RibbonRequest(Client client, Request request, URI uri) {

@@ -35,6 +35,7 @@ import feign.codec.ErrorDecoder;
  * Allows Feign interfaces to return HystrixCommand or rx.Observable or rx.Single objects. Also
  * decorates normal Feign methods with circuit breakers, but calls {@link HystrixCommand#execute()}
  * directly.
+ * 允许feign 接口 返回 hystrixCommand 或者 rx的可观察对象
  */
 public final class HystrixFeign {
 
@@ -45,6 +46,9 @@ public final class HystrixFeign {
   public static final class Builder extends Feign.Builder {
 
     private Contract contract = new Contract.Default();
+    /**
+     * 该对象可以将传入的 target 和 method 生成对应的 commandGroupKey 和 commandKey
+     */
     private SetterFactory setterFactory = new SetterFactory.Default();
 
     /**
@@ -138,7 +142,13 @@ public final class HystrixFeign {
     }
 
     /** Configures components needed for hystrix integration. */
+    /**
+     * 传入一个降级工厂 该工厂在遇到异常时 会返回 降级实例
+     * @param nullableFallbackFactory
+     * @return
+     */
     Feign build(final FallbackFactory<?> nullableFallbackFactory) {
+      // 注意这里为父类设置了一个 新的生成动态代理处理器对象
       super.invocationHandlerFactory(new InvocationHandlerFactory() {
         @Override
         public InvocationHandler create(Target target,

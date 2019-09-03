@@ -37,6 +37,7 @@ public interface SetterFactory {
 
   /**
    * Returns a hystrix setter appropriate for the given target and method
+   * 传入 目标对象和 请求的方法 包装成 hystrixCommand的构建器对象
    */
   HystrixCommand.Setter create(Target<?> target, Method method);
 

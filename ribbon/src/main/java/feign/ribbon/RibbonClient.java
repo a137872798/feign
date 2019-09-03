@@ -33,6 +33,7 @@ import java.net.URI;
  * 
  * Where {@code myAppProd} is the ribbon client name and {@code myAppProd.ribbon.listOfServers}
  * configuration is set.
+ * 使用 ribbon 增强的 client
  */
 public class RibbonClient implements Client {
 
@@ -69,12 +70,20 @@ public class RibbonClient implements Client {
     this.lbClientFactory = lbClientFactory;
   }
 
+  /**
+   * 从request 中抽取信息创建 HTTPClient 对象并发起请求 返回响应结果
+   * @param request safe to replay.
+   * @param options options to apply to this request.
+   * @return
+   * @throws IOException
+   */
   @Override
   public Response execute(Request request, Request.Options options) throws IOException {
     try {
       URI asUri = URI.create(request.url());
       String clientName = asUri.getHost();
       URI uriWithoutHost = cleanUrl(request.url(), clientName);
+      // 将req 包装成 ribbonReq 对象
       LBClient.RibbonRequest ribbonRequest =
           new LBClient.RibbonRequest(delegate, request, uriWithoutHost);
       return lbClient(clientName).executeWithLoadBalancer(ribbonRequest,

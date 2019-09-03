@@ -20,6 +20,9 @@ import com.netflix.client.config.IClientConfig;
 import com.netflix.client.config.IClientConfigKey;
 import com.netflix.loadbalancer.ILoadBalancer;
 
+/**
+ * 生成 具备执行 executeWithLoadBalancer() 的工厂对象
+ */
 public interface LBClientFactory {
 
   LBClient create(String clientName);
@@ -32,6 +35,7 @@ public interface LBClientFactory {
     public LBClient create(String clientName) {
       IClientConfig config =
           ClientFactory.getNamedConfig(clientName, DisableAutoRetriesByDefaultClientConfig.class);
+      // 使用 clientName 作为缓存键 从配置中获取 均衡负载实现类 并维护缓存
       ILoadBalancer lb = ClientFactory.getNamedLoadBalancer(clientName);
       return LBClient.create(lb, config);
     }
@@ -40,6 +44,9 @@ public interface LBClientFactory {
   IClientConfigKey<String> RetryableStatusCodes =
       new CommonClientConfigKey<String>("RetryableStatusCodes") {};
 
+  /**
+   * 生成配置工厂对象
+   */
   final class DisableAutoRetriesByDefaultClientConfig extends DefaultClientConfigImpl {
     @Override
     public int getDefaultMaxAutoRetriesNextServer() {
@@ -49,6 +56,7 @@ public interface LBClientFactory {
     @Override
     public void loadDefaultValues() {
       super.loadDefaultValues();
+      // 设置 RetryableStatusCodes
       putDefaultStringProperty(LBClientFactory.RetryableStatusCodes, "");
     }
   }
